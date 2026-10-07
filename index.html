@@ -1,0 +1,1532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SQL Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/alasql@4.4.0/dist/alasql.min.js"></script>
+<style>
+:root{
+  --green:#04AA6D; --green-hover:#059862; --on-green:#ffffff;
+  --nav:#282A35; --nav-ink:#ffffff; --nav-muted:#b8bcc8;
+  --bg:#ffffff; --side:#E7E9EB; --side-hover:#cdd0d4; --panel:#F1F1F1;
+  --text:#1f2126; --muted:#5a5e68; --border:#cfd2d6;
+  --tip:#D9EEE1; --note:#FFFFCC; --note-edge:#e2d45c;
+  --bad:#ffdddd; --bad-edge:#f44336; --warn:#fff4d1; --warn-edge:#e8a800;
+  --code-bg:#ffffff; --kw:#0000cd; --str:#a52a2a; --num:#0b7a4f; --cmt:#6a737d; --fn:#8a5a00;
+  --zebra:#E7E9EB; --focus:#2196F3; --null:#8a8f99;
+  --sans:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"Source Code Pro",Consolas,Menlo,"Courier New",monospace;
+  --top:56px;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --green:#04AA6D; --green-hover:#06c07c; --on-green:#ffffff;
+    --nav:#141d26; --nav-ink:#f2f4f6; --nav-muted:#9aa4ae;
+    --bg:#1d2a35; --side:#27343f; --side-hover:#34434f; --panel:#243240;
+    --text:#e3e6e9; --muted:#a3acb5; --border:#3b4955;
+    --tip:#1d4535; --note:#3d3a1e; --note-edge:#a39433;
+    --bad:#4a2427; --bad-edge:#f44336; --warn:#43391b; --warn-edge:#d19a00;
+    --code-bg:#15202b; --kw:#82aaff; --str:#f0a58a; --num:#8fd6a7; --cmt:#8b949e; --fn:#e5c07b;
+    --zebra:#26343f; --focus:#64b5f6; --null:#7f8a94;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --green:#04AA6D; --green-hover:#06c07c; --on-green:#ffffff;
+  --nav:#141d26; --nav-ink:#f2f4f6; --nav-muted:#9aa4ae;
+  --bg:#1d2a35; --side:#27343f; --side-hover:#34434f; --panel:#243240;
+  --text:#e3e6e9; --muted:#a3acb5; --border:#3b4955;
+  --tip:#1d4535; --note:#3d3a1e; --note-edge:#a39433;
+  --bad:#4a2427; --bad-edge:#f44336; --warn:#43391b; --warn-edge:#d19a00;
+  --code-bg:#15202b; --kw:#82aaff; --str:#f0a58a; --num:#8fd6a7; --cmt:#8b949e; --fn:#e5c07b;
+  --zebra:#26343f; --focus:#64b5f6; --null:#7f8a94;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + var(--top))}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:3px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;height:var(--top);background:var(--nav);color:var(--nav-ink);display:flex;align-items:center;gap:14px;padding:0 20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;letter-spacing:.2px;white-space:nowrap}
+.logo{background:var(--green);color:var(--on-green);font:600 15px/1 var(--mono);padding:7px 7px;border-radius:4px}
+.menu-btn{display:none;background:transparent;border:1px solid rgba(255,255,255,.35);color:var(--nav-ink);border-radius:5px;padding:5px 12px;cursor:pointer}
+.score{margin-left:auto;display:flex;align-items:center;gap:14px;position:relative}
+.level{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:150px}
+.level-name{font-size:14px;line-height:1;color:var(--nav-ink);font-weight:600}
+.level-sub{font-size:13px;line-height:1;color:var(--nav-muted)}
+.bar{width:150px;height:5px;background:rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .5s ease}
+.pts{background:var(--green);color:var(--on-green);border-radius:20px;padding:5px 14px;font-size:15px;white-space:nowrap;transition:transform .2s}
+.pts b{font-size:18px}
+.pts.bump{transform:scale(1.12)}
+.gain{position:absolute;right:6px;top:calc(100% + 4px);background:var(--green);color:var(--on-green);font-weight:700;font-size:15px;padding:2px 10px;border-radius:12px;opacity:0;pointer-events:none}
+.gain.show{animation:gain 1.4s ease-out forwards}
+@keyframes gain{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:translateY(0)}75%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
+
+/* layout */
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);align-items:start}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--top));height:calc(100vh - var(--top) - env(safe-area-inset-top,0px));height:calc(100dvh - var(--top) - env(safe-area-inset-top,0px));overflow-y:auto;background:var(--side);padding:14px 0 24px}
+.grp{margin-bottom:10px}
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin:10px 16px 4px;font-size:18px;font-weight:700}
+.gp{font-size:13px;font-weight:400;color:var(--muted)}
+.side ul{list-style:none;margin:0;padding:0}
+.item{width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:6px 16px;cursor:pointer;font-size:16px;line-height:1.3}
+.item:hover{background:var(--side-hover)}
+.item.active{background:var(--green);color:var(--on-green)}
+.iname{flex:1}
+.earned{font-size:13px;font-variant-numeric:tabular-nums;opacity:.8}
+.dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--muted);flex:none}
+.dot.done{background:var(--green);border-color:var(--green)}
+.dot.helped{background:linear-gradient(90deg,var(--green) 50%,transparent 50%);border-color:var(--green)}
+.dot.shown{background:var(--muted);border-color:var(--muted)}
+.item.active .dot{border-color:var(--on-green)}
+.item.active .dot.done{background:var(--on-green)}
+.item.active .dot.helped{background:linear-gradient(90deg,var(--on-green) 50%,transparent 50%)}
+.side-foot{padding:14px 16px 0;border-top:1px solid var(--border);margin-top:10px;font-size:14px;color:var(--muted)}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px}
+.linkbtn.armed{color:var(--bad-edge);font-weight:600}
+.scrim{display:none}
+
+.main{padding:20px 36px 60px;max-width:1240px;min-width:0}
+.pager{display:flex;justify-content:space-between;gap:10px;margin-bottom:14px}
+.pbtn{background:var(--green);color:var(--on-green);border:0;border-radius:5px;padding:7px 16px;font-size:16px;cursor:pointer}
+.pbtn:hover{background:var(--green-hover)}
+.pbtn:disabled{opacity:.35;cursor:default}
+.crumb{margin:0;color:var(--muted);font-size:15px}
+h1{font-weight:400;font-size:clamp(30px,4.2vw,42px);line-height:1.15;margin:2px 0 8px}
+.meta{margin:0 0 20px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:15px;color:var(--muted)}
+.diff{background:var(--side);color:var(--text);border-radius:4px;padding:2px 9px;font-size:14px}
+.worth{font-weight:600;color:var(--text)}
+
+.work{display:grid;grid-template-columns:minmax(0,1fr) 280px;grid-template-areas:"task db" "editor db" "result db";gap:22px 30px;align-items:start}
+.task{grid-area:task;background:var(--tip);border-left:6px solid var(--green);padding:14px 20px;font-size:18px}
+.task p{margin:0;max-width:72ch}
+.task p + p{margin-top:8px;font-size:15px;color:var(--muted)}
+.editorwrap{grid-area:editor;min-width:0}
+.resultwrap{grid-area:result;min-width:0}
+.lbl{display:block;font-size:17px;font-weight:600;margin:0 0 6px}
+
+/* editor */
+.editor{position:relative;height:190px;min-height:120px;resize:vertical;overflow:hidden;border:1px solid var(--border);border-radius:4px;background:var(--code-bg)}
+.editor:focus-within{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 35%,transparent)}
+.editor pre,.editor textarea{position:absolute;inset:0;margin:0;border:0;padding:12px 14px;font:15px/1.6 var(--mono);letter-spacing:0;tab-size:4;white-space:pre;overflow-wrap:normal;word-break:normal}
+.editor pre{overflow:hidden;color:var(--text);pointer-events:none;background:transparent}
+.editor textarea{resize:none;overflow:auto;background:transparent;color:transparent;caret-color:var(--text);outline:none}
+.editor textarea::placeholder{color:var(--muted)}
+.editor textarea::selection{background:color-mix(in srgb,var(--green) 30%,transparent)}
+.t-k{color:var(--kw)} .t-s{color:var(--str)} .t-n{color:var(--num)} .t-c{color:var(--cmt);font-style:italic} .t-f{color:var(--fn)}
+
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.btn{border:0;border-radius:5px;padding:9px 20px;font-size:17px;cursor:pointer;line-height:1.3}
+.btn.run{background:var(--green);color:var(--on-green);font-weight:600;padding:10px 26px}
+.btn.run:hover{background:var(--green-hover)}
+.btn.run:disabled{opacity:.5;cursor:progress}
+.btn.help{background:var(--note);color:var(--text);border:1px solid var(--note-edge)}
+.btn.sol{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn.sol:hover,.btn.help:hover{filter:brightness(.96)}
+.btn.small{padding:6px 16px;font-size:16px}
+.kbd{font-size:14px;color:var(--muted);margin-left:auto}
+.rules{margin:10px 0 0;font-size:15px;color:var(--muted)}
+
+.helpbox{margin-top:16px;background:var(--note);border-left:6px solid var(--note-edge);padding:12px 18px}
+.helpbox ol{margin:0;padding-left:22px}
+.helpbox li{margin:4px 0}
+.helpacts{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-top:10px}
+.helpacts .linkbtn{color:var(--text);font-size:15px}
+.btn.ask{background:var(--bg);border:1px solid var(--note-edge);font-size:15px;padding:6px 14px}
+.ai{margin-top:12px;padding:10px 14px;background:var(--bg);border-radius:4px;white-space:pre-wrap;font-size:16px}
+.ai.thinking{color:var(--muted)}
+.solbox{margin-top:16px;background:var(--panel);border-left:6px solid var(--muted);padding:12px 18px}
+.solbox pre{margin:0 0 8px;font:15px/1.6 var(--mono);white-space:pre;overflow-x:auto;background:var(--code-bg);padding:10px 12px;border-radius:4px}
+.solbox p{margin:0;max-width:72ch}
+
+/* result */
+.banner{padding:12px 18px;margin-bottom:16px;border-left:6px solid}
+.banner p{margin:0}
+.banner.ok{background:var(--tip);border-color:var(--green);display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.banner.miss{background:var(--warn);border-color:var(--warn-edge)}
+.banner.err{background:var(--bad);border-color:var(--bad-edge)}
+.banner pre{margin:6px 0 0;font:14px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word}
+.count{margin:0 0 8px;font-size:16px}
+.sublabel{margin:0 0 8px;font-size:15px;color:var(--muted)}
+.warnline{margin:0 0 10px;font-size:15px;background:var(--warn);padding:6px 12px;border-radius:4px}
+.empty{color:var(--muted);margin:0}
+.scroll{overflow-x:auto;max-width:100%}
+table.rt{border-collapse:collapse;width:100%;font-size:16px}
+.rt th,.rt td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;white-space:nowrap}
+.rt th{font-weight:700}
+.rt tbody tr:nth-child(odd){background:var(--zebra)}
+.null{color:var(--null);font-style:italic}
+
+/* database panel */
+.dbpanel{grid-area:db;background:var(--panel);border-radius:4px;padding:0 0 12px;font-size:15px}
+.dbpanel > summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.dbpanel > summary::-webkit-details-marker{display:none}
+.dbpanel > summary::after{content:"+";font-weight:400;font-size:20px;color:var(--muted)}
+.dbpanel[open] > summary::after{content:"−"}
+.dbhead{display:flex;justify-content:space-between;padding:4px 16px;color:var(--muted);font-size:14px;border-bottom:1px solid var(--border)}
+.tbl{border-bottom:1px solid var(--border)}
+.tbl > summary{cursor:pointer;display:flex;justify-content:space-between;padding:7px 16px;list-style:none}
+.tbl > summary::-webkit-details-marker{display:none}
+.tbl > summary:hover{background:var(--side)}
+.tname{color:var(--green);font-weight:600}
+.cols{padding:2px 16px 10px;margin:0;list-style:none}
+.cols li{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13.5px;padding:1px 0}
+.cols li span:last-child{color:var(--muted)}
+.prev{margin:4px 16px 10px;font-size:14px;padding:4px 12px;border-radius:4px;border:1px solid var(--green);background:transparent;color:var(--green);cursor:pointer}
+.dbnote{margin:12px 16px 0;font-size:14px;color:var(--muted)}
+
+@media (max-width:1180px){
+  .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"task" "db" "editor" "result"}
+}
+@media (max-width:860px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .menu-btn{display:inline-flex}
+  .side{position:fixed;top:0;left:0;bottom:0;height:auto;width:min(320px,86vw);z-index:40;padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-105%);transition:transform .22s ease;box-shadow:2px 0 18px rgba(0,0,0,.25)}
+  .side.open{transform:none}
+  .scrim.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+  .main{padding:16px 16px 48px}
+  .kbd{display:none}
+  .editor pre,.editor textarea{font-size:16px}
+}
+@media (max-width:560px){
+  .top{padding:0 12px;gap:10px}
+  .brand .word{display:none}
+  .level{min-width:0}
+  .bar{width:90px}
+  .level-sub{display:none}
+  .btn{padding:9px 16px}
+  .btn.run{padding:10px 20px}
+}
+@media (prefers-reduced-motion: reduce){
+  .gain.show{animation:fadeonly 1.4s linear forwards}
+  @keyframes fadeonly{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+  .side,.bar i,.pts{transition:none}
+  .pts.bump{transform:none}
+}
+
+/* track tabs */
+.tabs{display:flex;gap:3px;margin:0 12px 8px;padding:3px;background:var(--bg);border-radius:7px}
+.tab{flex:1;border:0;background:transparent;border-radius:5px;padding:7px 6px;cursor:pointer;font-size:15px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;line-height:1.2;gap:2px}
+.tab small{font-weight:400;font-size:12.5px}
+.tab[aria-selected="true"]{background:var(--green);color:var(--on-green)}
+.intro{margin:0 16px 4px;font-size:14px;color:var(--muted);line-height:1.4}
+
+/* fill-in-the-blank exercise */
+.fill{background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:14px 18px;font:16px/2.4 var(--mono);white-space:pre-wrap;overflow-x:auto;color:var(--text)}
+.blank{font:15px/1.4 var(--mono);padding:2px 6px;margin:0 1px;border:0;border-bottom:2px solid var(--muted);background:var(--panel);color:var(--text);border-radius:3px 3px 0 0;text-align:center;min-width:3ch}
+.blank:focus{outline:none}
+.blank.target{box-shadow:0 0 0 2px var(--green)}
+.blank.right{background:var(--tip);border-bottom-color:var(--green)}
+.blank.wrong{background:var(--bad);border-bottom-color:var(--bad-edge)}
+.blank.given{background:var(--note);border-bottom-color:var(--note-edge)}
+.blank.over{box-shadow:0 0 0 3px var(--green)}
+.blank::placeholder{color:var(--muted);letter-spacing:1px}
+.bankhelp{font-size:14px;color:var(--muted);margin:12px 0 8px}
+.bank{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 15px/1 var(--mono);padding:9px 13px;border:1px solid var(--border);border-bottom-width:3px;border-radius:6px;background:var(--bg);color:var(--text);cursor:grab;touch-action:manipulation}
+.chip:hover{border-color:var(--green)}
+.chip.used{opacity:.32;border-style:dashed}
+.btn.clear{background:transparent;border:0;text-decoration:underline;color:var(--muted);padding:9px 6px;font-size:15px}
+
+/* hint ladder */
+.steps li{margin:6px 0}
+.steps li::marker{font-weight:700}
+.steps .slabel{margin:0}
+.steps pre{margin:6px 0 2px;font:14.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;background:var(--bg);padding:8px 12px;border-radius:4px}
+.gap{background:var(--note);outline:1px dashed var(--note-edge);border-radius:2px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="menu-btn" id="menuBtn" aria-controls="side" aria-expanded="false">Menu</button>
+  <div class="brand"><span class="logo">SQL</span><span class="word">Practice</span></div>
+  <div class="score">
+    <div class="level">
+      <span class="level-name" id="levelName">SQL Newbie</span>
+      <div class="bar" aria-hidden="true"><i id="levelBar"></i></div>
+      <span class="level-sub" id="levelSub"></span>
+    </div>
+    <div class="pts" id="ptsPill"><b id="pts">0</b> pts</div>
+    <span class="gain" id="gain" aria-hidden="true"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" id="side" aria-label="Exercises and challenges">
+    <div class="tabs" role="tablist" aria-label="Practice type">
+      <button class="tab" role="tab" id="tab-ex" data-kind="ex">Exercises <small id="count-ex"></small></button>
+      <button class="tab" role="tab" id="tab-ch" data-kind="ch">Challenges <small id="count-ch"></small></button>
+    </div>
+    <p class="intro" id="trackIntro"></p>
+    <div id="sideList"></div>
+    <div class="side-foot">
+      <p style="margin:0 0 8px">Each Help press gives a bigger clue and lowers the points a bit more. Solution gives 0.</p>
+      <button class="linkbtn" id="resetBtn">Reset progress</button>
+    </div>
+  </nav>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="main">
+    <div class="pager">
+      <button class="pbtn" id="prevBtn">&#10094; Previous</button>
+      <button class="pbtn" id="nextBtn">Next &#10095;</button>
+    </div>
+    <p class="crumb" id="crumb"></p>
+    <h1 id="title">Loading…</h1>
+    <p class="meta"><span class="diff" id="diff"></span><span class="worth" id="worth"></span></p>
+
+    <div class="work">
+      <section class="task" id="task" aria-label="Your task"></section>
+
+      <details class="dbpanel" id="dbpanel" open>
+        <summary>Your database</summary>
+        <div class="dbhead"><span>Table</span><span>Records</span></div>
+        <div id="dbTables"></div>
+        <p class="dbnote">Every run starts from a fresh copy of this data, so INSERT, UPDATE and DELETE can't break anything.</p>
+      </details>
+
+      <section class="editorwrap">
+        <div id="chView">
+          <label class="lbl" for="sql">SQL statement:</label>
+          <div class="editor" id="editor">
+            <pre aria-hidden="true"><code id="hl" style="background:none;padding:0;font-size:inherit"></code></pre>
+            <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" placeholder="Type your SQL here"></textarea>
+          </div>
+        </div>
+
+        <div id="exView" hidden>
+          <div class="fill" id="fill"></div>
+          <p class="bankhelp">Tap a word to drop it into the outlined blank, or drag it onto any blank. You can also type. Tap a used word to take it back out.</p>
+          <div class="bank" id="bank" aria-label="Word bank"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn run" id="primaryBtn">Run SQL</button>
+          <button class="btn help" id="helpBtn">Help</button>
+          <button class="btn sol" id="solBtn">Solution</button>
+          <button class="btn clear" id="clearBtn" hidden>Clear</button>
+          <span class="kbd" id="kbd">Ctrl + Enter to run</span>
+        </div>
+        <p class="rules" id="rules"></p>
+
+        <div class="helpbox" id="helpbox" hidden>
+          <ol class="steps" id="steps"></ol>
+          <div class="helpacts">
+            <button class="btn ask" id="askBtn" hidden>Ask Claude what's wrong with my query</button>
+          </div>
+          <div class="ai" id="aiOut" hidden></div>
+        </div>
+
+        <div class="solbox" id="solbox" hidden>
+          <pre id="solCode"></pre>
+          <p id="solExplain"></p>
+        </div>
+      </section>
+
+      <section class="resultwrap">
+        <div id="verdict" aria-live="polite"></div>
+        <h2 class="lbl">Result:</h2>
+        <div id="result"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const TABLES = [
+  { name:'Customers', cols:[['CustomerID','INT'],['CustomerName','STRING'],['City','STRING'],['Country','STRING'],['Email','STRING']], rows:[
+    [1,'Ana Torres','Madrid','Spain','ana.torres@example.com'],
+    [2,'Lukas Becker','Berlin','Germany','lukas.becker@example.com'],
+    [3,'Chloé Martin','Paris','France','chloe.martin@example.com'],
+    [4,'Jonas Weber','Munich','Germany','jonas.weber@example.com'],
+    [5,'Priya Nair','London','UK','priya.nair@example.com'],
+    [6,'Marco Rossi','Rome','Italy',null],
+    [7,'Emma Schulz','Hamburg','Germany','emma.schulz@example.com'],
+    [8,'Oliver Smith','Manchester','UK',null],
+    [9,'Sofia Costa','Lisbon','Portugal','sofia.costa@example.com'],
+    [10,'Liam Murphy','Dublin','Ireland','liam.murphy@example.com']
+  ]},
+  { name:'Products', cols:[['ProductID','INT'],['ProductName','STRING'],['Category','STRING'],['Price','NUMBER'],['Stock','INT']], rows:[
+    [1,'Wireless Mouse','Electronics',24.99,120],
+    [2,'Mechanical Keyboard','Electronics',89.5,45],
+    [3,'USB-C Cable','Electronics',9.99,300],
+    [4,'Noise-Cancelling Headphones','Electronics',149,20],
+    [5,'SQL for Beginners','Books',32,60],
+    [6,'Clean Code Handbook','Books',41.25,35],
+    [7,'Sci-Fi Short Stories','Books',14.5,80],
+    [8,'Steel Water Bottle','Home',18.75,150],
+    [9,'Desk Lamp','Home',36.4,55],
+    [10,'Scented Candle','Home',12.3,200],
+    [11,'Standing Desk','Furniture',329,8],
+    [12,'Sticky Notes Pack','Office',4.2,500]
+  ]},
+  { name:'Orders', cols:[['OrderID','INT'],['CustomerID','INT'],['OrderDate','STRING'],['Status','STRING']], rows:[
+    [101,1,'2026-01-05','Shipped'],
+    [102,2,'2026-01-09','Shipped'],
+    [103,2,'2026-01-15','Cancelled'],
+    [104,4,'2026-02-02','Shipped'],
+    [105,5,'2026-02-11','Pending'],
+    [106,1,'2026-02-20','Shipped'],
+    [107,7,'2026-03-01','Shipped'],
+    [108,5,'2026-03-08','Cancelled'],
+    [109,9,'2026-03-14','Shipped'],
+    [110,2,'2026-03-22','Pending'],
+    [111,8,'2026-04-02','Shipped'],
+    [112,4,'2026-04-10','Shipped']
+  ]},
+  { name:'OrderItems', cols:[['OrderID','INT'],['ProductID','INT'],['Quantity','INT']], rows:[
+    [101,1,1],[101,3,2],[102,2,1],[103,4,1],[104,5,1],[104,6,1],[105,11,1],
+    [106,8,2],[106,10,3],[107,1,2],[108,9,1],[109,5,2],[110,3,4],[111,4,1],[111,1,1],[112,6,1]
+  ]},
+  { name:'Employees', cols:[['EmployeeID','INT'],['FirstName','STRING'],['LastName','STRING'],['Title','STRING'],['ManagerID','INT']], rows:[
+    [1,'Helena','Vogt','CEO',null],
+    [2,'Samir','Haddad','Sales Manager',1],
+    [3,'Grace','Kim','Sales Rep',2],
+    [4,'Tomás','Silva','Sales Rep',2],
+    [5,'Nina','Petrova','Support Lead',1],
+    [6,'Ben','Carter','Support Agent',5]
+  ]}
+];
+
+
+const EX = [
+  {id:'x-select', group:'x-basics', title:'Get every column',
+   task:'Fill in the missing words to get all columns from the <code>Customers</code> table.',
+   code:'[[SELECT]] * [[FROM]] Customers;',
+   hint:'Every query that reads data starts with the same keyword, and the table name comes after a second keyword.',
+   explain:'<code>SELECT</code> starts the query and <code>FROM</code> names the table.'},
+  {id:'x-columns', group:'x-basics', title:'Pick two columns',
+   task:'Get only the name and the city of every customer.',
+   code:'SELECT [[CustomerName]], [[City]] FROM Customers;',
+   hint:'Look at the columns of Customers in the database panel. You need the one that holds names and the one that holds cities.',
+   explain:'List the columns you want after <code>SELECT</code>, separated by a comma.'},
+  {id:'x-distinct', decoys:['UNIQUE','ALL','DIFFERENT'], group:'x-basics', title:'No duplicates',
+   task:'List every country once, without repeats.',
+   code:'SELECT [[DISTINCT]] Country FROM Customers;',
+   hint:'One keyword placed right after SELECT removes duplicate rows.',
+   explain:'<code>DISTINCT</code> keeps only unique values.'},
+  {id:'x-where', group:'x-basics', title:'Filter rows',
+   task:'Get every customer who lives in Berlin.',
+   code:"SELECT * FROM Customers [[WHERE]] [[City]] = '[[Berlin]]';",
+   hint:'The filtering keyword comes after the table name, then the column to check, then the value.',
+   explain:'<code>WHERE</code> keeps only rows where <code>City</code> equals the text in quotes.'},
+  {id:'x-not', group:'x-basics', title:'Everything except',
+   task:'Get every customer who does not live in Germany.',
+   code:"SELECT * FROM Customers WHERE [[NOT]] Country = 'Germany';",
+   hint:'One small word flips a condition so it matches the opposite rows.',
+   explain:'<code>NOT</code> reverses the condition that follows it.'},
+  {id:'x-and', decoys:['OR','>','='], group:'x-basics', title:'Both conditions',
+   task:'Get products in the Electronics category that cost less than 30.',
+   code:"SELECT * FROM Products\nWHERE Category = 'Electronics' [[AND]] Price [[<]] 30;",
+   hint:'Both conditions must be true at the same time. You also need the symbol for "less than".',
+   explain:'<code>AND</code> needs both conditions to be true, and <code>&lt;</code> means "less than".'},
+  {id:'x-or', decoys:['AND','NOT','IN'], group:'x-basics', title:'Either condition',
+   task:'Get customers who live in Madrid or in Lisbon.',
+   code:"SELECT * FROM Customers\nWHERE City = 'Madrid' [[OR]] City = 'Lisbon';",
+   hint:'A row should match if at least one of the two conditions is true.',
+   explain:'<code>OR</code> matches a row when either condition is true.'},
+
+  {id:'x-order', group:'x-sort', title:'Sort alphabetically',
+   task:'Sort all customers by name, from A to Z.',
+   code:'SELECT * FROM Customers [[ORDER]] [[BY]] CustomerName;',
+   hint:'Sorting uses a two-word clause at the end of the query.',
+   explain:'<code>ORDER BY</code> sorts the result. A to Z is the default direction.'},
+  {id:'x-desc', decoys:['ASC','LIMIT','BY'], group:'x-sort', title:'Biggest first',
+   task:'Sort all products from most expensive to cheapest.',
+   code:'SELECT * FROM Products ORDER BY Price [[DESC]];',
+   hint:'The default sort is smallest first. Add the keyword for the reverse direction.',
+   explain:'<code>DESC</code> means descending: largest first.'},
+  {id:'x-limit', group:'x-sort', title:'Only a few rows',
+   task:'Get the 5 cheapest products.',
+   code:'SELECT * FROM Products ORDER BY [[Price]] [[LIMIT]] 5;',
+   hint:'Sort by the column that holds the cost, then cap how many rows come back.',
+   explain:'Sorting by <code>Price</code> puts the cheapest first, and <code>LIMIT 5</code> keeps the first five.'},
+  {id:'x-between', group:'x-sort', title:'A range of values',
+   task:'Get products priced from 10 to 20, including both ends.',
+   code:'SELECT * FROM Products WHERE Price [[BETWEEN]] 10 [[AND]] 20;',
+   hint:'One keyword starts the range, and the word you use to combine two conditions separates its two ends.',
+   explain:'<code>BETWEEN 10 AND 20</code> includes both 10 and 20.'},
+  {id:'x-in', decoys:['LIKE','BETWEEN','IS'], group:'x-sort', title:'One of a list',
+   task:'Get customers from Spain, Italy or Portugal.',
+   code:"SELECT * FROM Customers\nWHERE Country [[IN]] ('Spain', 'Italy', 'Portugal');",
+   hint:'A two-letter keyword checks a value against a list in parentheses.',
+   explain:'<code>IN</code> matches any value in the list.'},
+  {id:'x-like', decoys:['IN','=','_'], group:'x-sort', title:'Ends with',
+   task:'Get products whose name ends with the word Desk.',
+   code:"SELECT * FROM Products WHERE ProductName [[LIKE]] '[[%]]Desk';",
+   hint:'Pattern matching uses its own keyword, and one symbol stands for "any characters".',
+   explain:"<code>LIKE</code> matches a pattern, and <code>%</code> stands for any characters, so <code>'%Desk'</code> means \"ends with Desk\"."},
+  {id:'x-null', decoys:['NOT','EMPTY','='], group:'x-sort', title:'Missing emails',
+   task:'Get customers who have no email address.',
+   code:'SELECT * FROM Customers WHERE Email [[IS]] [[NULL]];',
+   hint:"Missing values have a special name, and you can't check them with =.",
+   explain:'<code>IS NULL</code> finds missing values.'},
+  {id:'x-notnull', decoys:['IS','NO','AND'], group:'x-sort', title:'Has an email',
+   task:'Get customers who do have an email address.',
+   code:'SELECT * FROM Customers WHERE Email IS [[NOT]] NULL;',
+   hint:'Flip the missing-value check around.',
+   explain:'<code>IS NOT NULL</code> finds rows that have a value.'},
+
+  {id:'x-min', decoys:['MAX','COUNT','AVG'], group:'x-func', title:'Lowest value',
+   task:'Find the lowest product price.',
+   code:'SELECT [[MIN]](Price) FROM Products;',
+   hint:'There is a function that returns the smallest value in a column.',
+   explain:'<code>MIN()</code> returns the smallest value. <code>MAX()</code> does the opposite.'},
+  {id:'x-count', decoys:['SUM','MAX','AVG'], group:'x-func', title:'Count rows',
+   task:'Count how many products are in the Books category.',
+   code:"SELECT [[COUNT]](*) FROM Products WHERE Category = 'Books';",
+   hint:'This function counts rows. The star inside it means "every row".',
+   explain:'<code>COUNT(*)</code> counts the rows that pass the <code>WHERE</code>.'},
+  {id:'x-sum', decoys:['COUNT','AVG','MAX'], group:'x-func', title:'Add it up',
+   task:'Add up the stock of every product.',
+   code:'SELECT [[SUM]](Stock) FROM Products;',
+   hint:'This function adds together all the values in a column.',
+   explain:'<code>SUM()</code> adds up the values in a column.'},
+  {id:'x-alias', decoys:['IS','TO','ON'], group:'x-func', title:'Rename a column',
+   task:'Show the customer names in a column called Buyer.',
+   code:'SELECT CustomerName [[AS]] Buyer FROM Customers;',
+   hint:'A two-letter keyword gives a column a new name in the result.',
+   explain:'<code>AS</code> sets the name of a column in the result.'},
+  {id:'x-group', group:'x-func', title:'One row per group',
+   task:'Count the customers in each country.',
+   code:'SELECT Country, COUNT(*) FROM Customers [[GROUP]] [[BY]] Country;',
+   hint:'A two-word clause makes one group for each different value.',
+   explain:'<code>GROUP BY Country</code> makes one group per country, and <code>COUNT(*)</code> counts each group.'},
+  {id:'x-having', decoys:['WHERE','ORDER','LIMIT'], group:'x-func', title:'Filter the groups',
+   task:'Show only the countries that have more than one customer.',
+   code:'SELECT Country, COUNT(*) FROM Customers\nGROUP BY Country\n[[HAVING]] COUNT(*) > 1;',
+   hint:"WHERE can't filter groups. A different keyword does that job after GROUP BY.",
+   explain:'<code>HAVING</code> filters groups after they are made.'},
+
+  {id:'x-join', group:'x-joins', title:'Join two tables',
+   task:'Show each order ID with the name of the customer who placed it.',
+   code:'SELECT Orders.OrderID, Customers.CustomerName\nFROM Orders\n[[JOIN|INNER JOIN]] Customers [[ON]] Orders.CustomerID = Customers.[[CustomerID]];',
+   hint:'One keyword brings in the second table, another starts the matching condition, and both tables share an ID column.',
+   explain:'<code>JOIN ... ON</code> pairs each order with the customer whose <code>CustomerID</code> matches.'},
+  {id:'x-leftjoin', decoys:['INNER','RIGHT','OUTER'], group:'x-joins', title:'Keep every customer',
+   task:'List every customer with their order IDs, including customers who never ordered.',
+   code:'SELECT Customers.CustomerName, Orders.OrderID\nFROM Customers\n[[LEFT]] JOIN Orders ON Customers.CustomerID = Orders.CustomerID;',
+   hint:'This kind of join keeps every row from the first table, even when nothing matches.',
+   explain:'<code>LEFT JOIN</code> keeps every customer. Customers with no orders get <code>NULL</code> in <code>OrderID</code>.'},
+
+  {id:'x-insert', group:'x-change', title:'Add a row', check:'SELECT * FROM Customers', checkTable:'Customers',
+   task:'Add a new customer: ID 11, Ingrid Berg, from Norway.',
+   code:"[[INSERT]] [[INTO]] Customers (CustomerID, CustomerName, Country)\n[[VALUES]] (11, 'Ingrid Berg', 'Norway');",
+   hint:'Two keywords at the start mean "put into", and a third keyword introduces the new values.',
+   explain:'<code>INSERT INTO</code> names the table and columns, and <code>VALUES</code> lists the new data.'},
+  {id:'x-update', decoys:['CHANGE','INTO','VALUES'], group:'x-change', title:'Change a value', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Set the stock of product 11 to 0.',
+   code:'[[UPDATE]] Products\n[[SET]] Stock = 0\nWHERE ProductID = 11;',
+   hint:'The first keyword names the table to change; the second says which column gets the new value.',
+   explain:'<code>UPDATE</code> picks the table and <code>SET</code> gives the new value.'},
+  {id:'x-delete', decoys:['DROP','REMOVE','INTO'], group:'x-change', title:'Remove rows', check:'SELECT * FROM Orders', checkTable:'Orders',
+   task:'Delete every cancelled order.',
+   code:"[[DELETE]] [[FROM]] Orders WHERE Status = 'Cancelled';",
+   hint:'Two keywords: one says remove, the other points to the table the rows come from.',
+   explain:'<code>DELETE FROM</code> removes the rows that match the <code>WHERE</code>.'},
+
+  {id:'x-create', decoys:['NEW','MAKE','DROP'], group:'x-tables', title:'Create a table', noRun:true,
+   task:'Create a table called Suppliers with an ID column and a name column.',
+   code:'[[CREATE]] [[TABLE]] Suppliers (\n  SupplierID INT,\n  SupplierName VARCHAR(255)\n);',
+   hint:'Two words: make something new, and say what kind of thing it is.',
+   explain:'<code>CREATE TABLE</code> makes a new table. Each column gets a name and a data type.'},
+  {id:'x-alter', decoys:['CHANGE','INSERT','UPDATE'], group:'x-tables', title:'Add a column', noRun:true,
+   task:'Add a Phone column to the Customers table.',
+   code:'[[ALTER]] TABLE Customers\n[[ADD]] Phone VARCHAR(20);',
+   hint:'The first keyword changes a table that already exists; the second adds something to it.',
+   explain:'<code>ALTER TABLE ... ADD</code> adds a new column to an existing table.'},
+  {id:'x-drop', decoys:['DELETE','ALTER','REMOVE'], group:'x-tables', title:'Delete a table', noRun:true,
+   task:'Delete the Suppliers table completely.',
+   code:'[[DROP]] [[TABLE]] Suppliers;',
+   hint:'This keyword removes a whole table, not just its rows.',
+   explain:'<code>DROP TABLE</code> deletes the table and all of its data.'}
+];
+
+
+const CH = [
+  {id:'select-all', group:'basics', title:'Select everything',
+   task:'Show every column and every row from the <code>Customers</code> table.',
+   hints:['The star symbol <code>*</code> means "all columns".','The pattern is <code>SELECT * FROM TableName;</code>'],
+   solution:'SELECT * FROM Customers;',
+   explain:'<code>SELECT *</code> picks every column. With no <code>WHERE</code> clause, every row comes back.'},
+  {id:'pick-columns', group:'basics', title:'Pick columns',
+   task:'Show only the <code>ProductName</code> and <code>Price</code> of every product.',
+   hints:['Replace the <code>*</code> with the names of the columns you want.','Separate columns with commas: <code>SELECT ProductName, Price FROM ...</code>'],
+   solution:'SELECT ProductName, Price FROM Products;',
+   explain:'List the columns you want after <code>SELECT</code>, separated by commas. They come back in the order you list them.'},
+  {id:'where', group:'basics', title:'Filter with WHERE',
+   task:'Find every customer who lives in <strong>Germany</strong>. Show all columns.',
+   hints:['Rows are filtered in a <code>WHERE</code> clause, which goes after <code>FROM</code>.','Text goes in single quotes: <code>WHERE Country = \'...\'</code>'],
+   solution:"SELECT * FROM Customers WHERE Country = 'Germany';",
+   explain:'<code>WHERE</code> keeps only the rows where the condition is true. Text values go inside single quotes.'},
+  {id:'order-by', group:'basics', title:'Sort with ORDER BY', ordered:true,
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products that cost less than 20, cheapest first.',
+   hints:['You need two clauses after <code>FROM</code>: one to filter and one to sort.','<code>WHERE Price &lt; 20</code> goes before <code>ORDER BY Price</code>.'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price < 20\nORDER BY Price;',
+   explain:'<code>WHERE</code> filters first, then <code>ORDER BY</code> sorts what is left. Ascending (cheapest first) is the default, so <code>ASC</code> is optional.'},
+  {id:'distinct', group:'basics', title:'Unique values',
+   task:'List each country that appears in <code>Customers</code>, with no duplicates.',
+   hints:['There is a keyword that goes right after <code>SELECT</code> and removes duplicate rows.','<code>SELECT DISTINCT Country FROM ...</code>'],
+   solution:'SELECT DISTINCT Country FROM Customers;',
+   explain:'<code>DISTINCT</code> removes duplicate rows from the result, so each country appears once.'},
+  {id:'count', group:'basics', title:'Count rows',
+   task:'How many products are in the <code>Products</code> table? Return a single number.',
+   hints:['SQL has a function that counts rows.','Put <code>COUNT(*)</code> in the <code>SELECT</code> list.'],
+   solution:'SELECT COUNT(*) FROM Products;',
+   explain:'<code>COUNT(*)</code> counts rows. With no <code>GROUP BY</code>, it counts the whole table and returns one number.'},
+  {id:'like', group:'basics', title:'Pattern matching',
+   task:'Find every product whose name starts with the letter <strong>S</strong>. Show all columns.',
+   hints:['Use <code>LIKE</code> with a pattern. The <code>%</code> symbol stands for any characters.','<code>WHERE ProductName LIKE \'S%\'</code>'],
+   solution:"SELECT * FROM Products WHERE ProductName LIKE 'S%';",
+   explain:'<code>LIKE</code> matches text patterns. <code>%</code> means "any number of characters", so <code>\'S%\'</code> means "starts with S".'},
+
+  {id:'in', group:'filter', title:'Match a list with IN',
+   task:'Show every product in the <strong>Electronics</strong> or <strong>Books</strong> category. Show all columns.',
+   hints:['<code>IN</code> checks a column against a list of values.','<code>WHERE Category IN (\'Electronics\', \'Books\')</code>'],
+   solution:"SELECT * FROM Products\nWHERE Category IN ('Electronics', 'Books');",
+   explain:'<code>IN</code> is a shorter way to write <code>Category = \'Electronics\' OR Category = \'Books\'</code>.'},
+  {id:'between', group:'filter', title:'Ranges with BETWEEN',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products priced from 10 to 50, including both ends.',
+   hints:['<code>BETWEEN</code> checks whether a value falls inside a range.','<code>WHERE Price BETWEEN 10 AND 50</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price BETWEEN 10 AND 50;',
+   explain:'<code>BETWEEN a AND b</code> includes both ends, so it means the same as <code>Price &gt;= 10 AND Price &lt;= 50</code>.'},
+  {id:'null', group:'filter', title:'Missing values',
+   task:'Some customers have no email address on file. Show the <code>CustomerName</code> of those customers.',
+   hints:['A missing value is <code>NULL</code>, and <code>= NULL</code> never matches anything.','Use <code>WHERE Email IS NULL</code>.'],
+   solution:'SELECT CustomerName FROM Customers\nWHERE Email IS NULL;',
+   explain:'<code>NULL</code> means "no value", so it can\'t be compared with <code>=</code>. Use <code>IS NULL</code> or <code>IS NOT NULL</code> instead.'},
+  {id:'limit', group:'filter', title:'Top 3', ordered:true,
+   task:'Show the <code>ProductName</code> and <code>Price</code> of the 3 most expensive products, most expensive first.',
+   hints:['Sort from most to least expensive, then keep only the first rows.','<code>ORDER BY Price DESC LIMIT 3</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nORDER BY Price DESC\nLIMIT 3;',
+   explain:'<code>ORDER BY Price DESC</code> puts the most expensive first, and <code>LIMIT 3</code> keeps only the first three rows.'},
+  {id:'group-count', group:'filter', title:'Count per group',
+   task:'For each country, show the country and how many customers live there.',
+   hints:['<code>GROUP BY</code> makes one row per distinct value of a column.','<code>SELECT Country, COUNT(*) ... GROUP BY Country</code>'],
+   solution:'SELECT Country, COUNT(*) AS NumCustomers\nFROM Customers\nGROUP BY Country;',
+   explain:'<code>GROUP BY</code> makes one group per country, and <code>COUNT(*)</code> counts the rows in each group. <code>AS</code> gives the column a readable name.'},
+  {id:'having', group:'filter', title:'Filter groups with HAVING',
+   task:'Show each <code>Category</code> and its average product price, but only categories where the average price is above 30.',
+   hints:['Group by <code>Category</code> and use <code>AVG(Price)</code> to get the average.','Conditions on groups go in <code>HAVING</code>, after <code>GROUP BY</code>: <code>HAVING AVG(Price) &gt; 30</code>'],
+   solution:'SELECT Category, AVG(Price) AS AvgPrice\nFROM Products\nGROUP BY Category\nHAVING AVG(Price) > 30;',
+   explain:'<code>WHERE</code> filters rows before grouping; <code>HAVING</code> filters groups after. That is why the <code>AVG</code> condition goes in <code>HAVING</code>.'},
+  {id:'inner-join', group:'filter', title:'Join two tables',
+   task:'Show every order\'s <code>OrderID</code> and <code>OrderDate</code> together with the <code>CustomerName</code> of the customer who placed it.',
+   hints:['<code>Orders</code> has a <code>CustomerID</code> column that matches <code>CustomerID</code> in <code>Customers</code>.','<code>FROM Orders o JOIN Customers c ON o.CustomerID = c.CustomerID</code>'],
+   solution:'SELECT o.OrderID, o.OrderDate, c.CustomerName\nFROM Orders o\nINNER JOIN Customers c ON o.CustomerID = c.CustomerID;',
+   explain:'<code>JOIN</code> combines rows from two tables wherever the <code>ON</code> condition matches. Short aliases like <code>o</code> and <code>c</code> keep it readable.'},
+
+  {id:'insert', group:'change', title:'Add a row', check:'SELECT * FROM Customers', checkTable:'Customers',
+   task:'A new customer signed up. Add them to <code>Customers</code>: ID <strong>11</strong>, name <strong>Mia Novak</strong>, city <strong>Zagreb</strong>, country <strong>Croatia</strong>, email <strong>mia.novak@example.com</strong>.',
+   hints:['<code>INSERT INTO Customers (column, column, ...) VALUES (value, value, ...)</code>','Text values need single quotes; the ID is a number and doesn\'t.'],
+   solution:"INSERT INTO Customers (CustomerID, CustomerName, City, Country, Email)\nVALUES (11, 'Mia Novak', 'Zagreb', 'Croatia', 'mia.novak@example.com');",
+   explain:'<code>INSERT INTO</code> names the table and columns, and <code>VALUES</code> gives the new row in the same order.'},
+  {id:'update', group:'change', title:'Change a value', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'The <strong>Wireless Mouse</strong> is on sale. Set its <code>Price</code> to <strong>22.99</strong>. No other product should change.',
+   hints:['<code>UPDATE table SET column = value WHERE condition</code>','Use <code>WHERE ProductName = \'Wireless Mouse\'</code> so only that row changes.'],
+   solution:"UPDATE Products\nSET Price = 22.99\nWHERE ProductName = 'Wireless Mouse';",
+   explain:'<code>UPDATE</code> changes existing rows. The <code>WHERE</code> clause limits it to one product; without it, every price would change.'},
+  {id:'delete', group:'change', title:'Remove rows', check:'SELECT * FROM Orders', checkTable:'Orders',
+   task:'Delete every order whose <code>Status</code> is <strong>Cancelled</strong>.',
+   hints:['<code>DELETE FROM table WHERE condition</code>','<code>WHERE Status = \'Cancelled\'</code>'],
+   solution:"DELETE FROM Orders\nWHERE Status = 'Cancelled';",
+   explain:'<code>DELETE FROM</code> removes the rows that match <code>WHERE</code>. Always double-check the condition: without it, the whole table is emptied.'},
+
+  {id:'never-ordered', group:'joins', title:'Customers with no orders',
+   task:'Show the <code>CustomerName</code> of every customer who has never placed an order.',
+   hints:['A <code>LEFT JOIN</code> keeps every customer, even the ones with no matching order.','For customers with no orders, the order columns are <code>NULL</code>. Filter with <code>WHERE o.OrderID IS NULL</code>.'],
+   solution:'SELECT c.CustomerName\nFROM Customers c\nLEFT JOIN Orders o ON c.CustomerID = o.CustomerID\nWHERE o.OrderID IS NULL;',
+   explain:'A <code>LEFT JOIN</code> keeps every customer. Where no order matches, the <code>Orders</code> columns are <code>NULL</code>, and that is exactly what the <code>WHERE</code> picks out.'},
+  {id:'unsold', group:'joins', title:'Products nobody bought',
+   task:'Show the <code>ProductName</code> of every product that has never been ordered. Order lines are in <code>OrderItems</code>.',
+   hints:['First work out which <code>ProductID</code>s appear in <code>OrderItems</code>.','<code>WHERE ProductID NOT IN (SELECT ProductID FROM OrderItems)</code>'],
+   solution:'SELECT ProductName FROM Products\nWHERE ProductID NOT IN (SELECT ProductID FROM OrderItems);',
+   explain:'The subquery lists every <code>ProductID</code> that has been ordered. <code>NOT IN</code> keeps the products that are missing from that list.'},
+  {id:'above-avg', group:'joins', title:'Above average',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products that cost more than the average price of all products.',
+   hints:['You can put a whole query in parentheses and use its result as a value.','<code>WHERE Price &gt; (SELECT AVG(Price) FROM Products)</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price > (SELECT AVG(Price) FROM Products);',
+   explain:'The subquery in parentheses works out one number, the average price, and the outer query compares every product against it.'},
+  {id:'order-totals', group:'joins', title:'Order totals',
+   task:'For each order, show the <code>OrderID</code> and the order\'s total value: the sum of <code>Quantity</code> times <code>Price</code> for its items.',
+   hints:['Join <code>OrderItems</code> to <code>Products</code> on <code>ProductID</code> so each item has a price.','<code>SELECT oi.OrderID, SUM(oi.Quantity * p.Price) ... GROUP BY oi.OrderID</code>'],
+   solution:'SELECT oi.OrderID, SUM(oi.Quantity * p.Price) AS Total\nFROM OrderItems oi\nJOIN Products p ON oi.ProductID = p.ProductID\nGROUP BY oi.OrderID;',
+   explain:'Joining gives each order line its price. Multiply by quantity, then <code>SUM</code> per order with <code>GROUP BY</code>.'},
+  {id:'repeat-customers', group:'joins', title:'Repeat customers',
+   task:'Show the <code>CustomerName</code> and number of orders for every customer who has placed more than one order.',
+   hints:['Join <code>Customers</code> and <code>Orders</code>, then <code>GROUP BY</code> the customer\'s name.','Keep only the bigger groups with <code>HAVING COUNT(*) &gt; 1</code>.'],
+   solution:'SELECT c.CustomerName, COUNT(*) AS NumOrders\nFROM Customers c\nJOIN Orders o ON c.CustomerID = o.CustomerID\nGROUP BY c.CustomerName\nHAVING COUNT(*) > 1;',
+   explain:'Join customers to their orders, make one group per customer, count each group, and let <code>HAVING</code> keep counts above 1.'},
+  {id:'self-join', group:'joins', title:'Who is your manager?',
+   task:'Show each employee\'s <code>FirstName</code> next to their manager\'s <code>FirstName</code>. Skip employees with no manager, and name the columns <code>Employee</code> and <code>Manager</code>.',
+   hints:['Join <code>Employees</code> to itself: one copy for the employee, one for the manager.','<code>FROM Employees e JOIN Employees m ON e.ManagerID = m.EmployeeID</code>, then use <code>AS</code> to name the columns.'],
+   solution:'SELECT e.FirstName AS Employee, m.FirstName AS Manager\nFROM Employees e\nJOIN Employees m ON e.ManagerID = m.EmployeeID;',
+   explain:'A self join uses the same table twice under different aliases: <code>e</code> for the employee and <code>m</code> for the manager.'},
+  {id:'top-spender', group:'joins', title:'Best customer',
+   task:'Which customer has spent the most across all their orders? Show their <code>CustomerName</code> and total spent, in one row.',
+   hints:['You need four tables: <code>Customers</code>, <code>Orders</code>, <code>OrderItems</code> and <code>Products</code>.','After <code>GROUP BY c.CustomerName</code>, sort by the total with <code>ORDER BY ... DESC</code> and add <code>LIMIT 1</code>.'],
+   solution:'SELECT c.CustomerName, SUM(oi.Quantity * p.Price) AS TotalSpent\nFROM Customers c\nJOIN Orders o ON c.CustomerID = o.CustomerID\nJOIN OrderItems oi ON o.OrderID = oi.OrderID\nJOIN Products p ON oi.ProductID = p.ProductID\nGROUP BY c.CustomerName\nORDER BY TotalSpent DESC\nLIMIT 1;',
+   explain:'Three joins connect each customer to the prices they paid. Sum per customer, sort the totals from high to low, and keep the top row.'}
+];
+
+
+
+const GROUPS = [
+  {id:'x-basics', kind:'ex', name:'SELECT basics', pts:5},
+  {id:'x-sort', kind:'ex', name:'Filtering and sorting', pts:5},
+  {id:'x-func', kind:'ex', name:'Functions and grouping', pts:5},
+  {id:'x-joins', kind:'ex', name:'Joins', pts:5},
+  {id:'x-change', kind:'ex', name:'Changing data', pts:5},
+  {id:'x-tables', kind:'ex', name:'Tables', pts:5},
+  {id:'basics', kind:'ch', name:'Basics', pts:10},
+  {id:'filter', kind:'ch', name:'Filtering and grouping', pts:20},
+  {id:'change', kind:'ch', name:'Changing data', pts:20},
+  {id:'joins', kind:'ch', name:'Joins and subqueries', pts:30}
+];
+const TRACKS = {
+  ex: { name:'Exercise', intro:'Put the missing words in the right places.', empty:'Fill in the blanks, then press Submit answer to check them.' },
+  ch: { name:'Challenge', intro:'Write the whole query yourself.', empty:'Click Run SQL to execute the statement above.' }
+};
+const LEVELS = [[0,'SQL Newbie'],[50,'Query Writer'],[140,'Filter Pro'],[250,'Join Explorer'],[380,'Data Wrangler'],[540,'SQL Master']];
+const FACTORS = [1, 0.75, 0.5, 0.25];
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const groupOf = it => GROUPS.find(g => g.id === it.group);
+const stripTags = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+
+const IDENT = {};
+TABLES.forEach(t => { IDENT[t.name.toLowerCase()] = t.name; t.cols.forEach(c => IDENT[c[0].toLowerCase()] = c[0]); });
+
+function splitSQL(src){
+  const out = []; let cur = ''; let i = 0; const n = src.length;
+  while (i < n){
+    const ch = src[i], nx = src[i+1];
+    if (ch === '-' && nx === '-'){ while (i < n && src[i] !== '\n') i++; continue; }
+    if (ch === '/' && nx === '*'){ const j = src.indexOf('*/', i+2); i = j < 0 ? n : j+2; cur += ' '; continue; }
+    if (ch === "'" || ch === '"' || ch === '`'){
+      let j = i+1;
+      while (j < n){ if (src[j] === ch){ if (src[j+1] === ch){ j += 2; continue; } break; } j++; }
+      cur += src.slice(i, j+1); i = j+1; continue;
+    }
+    if (ch === ';'){ if (cur.trim()) out.push(cur.trim()); cur = ''; i++; continue; }
+    cur += ch; i++;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+function canon(stmt){
+  return stmt.replace(/('(?:[^']|'')*'|"(?:[^"]|"")*"|`[^`]*`)|\b([A-Za-z_][A-Za-z0-9_]*)\b/g,
+    (m, q, w) => q ? q : (IDENT[w.toLowerCase()] || w));
+}
+
+const KW = new Set('SELECT FROM WHERE AND OR NOT IN IS NULL LIKE BETWEEN ORDER BY GROUP HAVING LIMIT OFFSET JOIN INNER LEFT RIGHT FULL OUTER CROSS ON AS DISTINCT INSERT INTO VALUES UPDATE SET DELETE CREATE TABLE DROP ALTER ADD UNION ALL EXISTS CASE WHEN THEN ELSE END ASC DESC TOP TRUE FALSE PRIMARY KEY'.split(' '));
+const FN = new Set('COUNT SUM AVG MIN MAX UPPER LOWER LENGTH LEN ROUND COALESCE IFNULL SUBSTRING ABS'.split(' '));
+function highlight(src){
+  return src.replace(/(--[^\n]*)|('(?:[^']|'')*'?)|("(?:[^"]|"")*"?)|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_][A-Za-z0-9_]*)\b|([&<>])/g,
+    (m, c, s1, s2, n, w, x) => {
+      if (c) return '<span class="t-c">' + esc(c) + '</span>';
+      if (s1 || s2) return '<span class="t-s">' + esc(s1 || s2) + '</span>';
+      if (n) return '<span class="t-n">' + n + '</span>';
+      if (w){ const U = w.toUpperCase(); if (KW.has(U)) return '<span class="t-k">' + w + '</span>'; if (FN.has(U)) return '<span class="t-f">' + w + '</span>'; return w; }
+      return esc(x);
+    });
+}
+const hlGaps = src => highlight(src).replace(/___/g, '<span class="gap">___</span>');
+
+/* ---------------- build items ---------------- */
+// Challenges: a hint ladder that gets closer to the answer with every press.
+function skeleton(sql){
+  const toks = []; const re = /('(?:[^']|'')*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)|(\s+)|([\s\S])/g;
+  let m;
+  while ((m = re.exec(sql))){
+    if (m[1] || m[2]) toks.push({ s:m[0], blank:true });
+    else if (m[3]){ const U = m[3].toUpperCase(); toks.push({ s:m[0], blank: !(KW.has(U) || FN.has(U)) }); }
+    else toks.push({ s:m[0], blank:false });
+  }
+  return toks;
+}
+function buildLadder(c){
+  const toks = skeleton(c.solution);
+  const n = toks.filter(t => t.blank).length;
+  const steps = [
+    { text: c.hints[0] },
+    { text: c.hints[1] },
+    { text: 'Here is the shape of the answer. The keywords are in place; fill in the names and values:', code: toks.map(t => t.blank ? '___' : t.s).join('') }
+  ];
+  if (n > 1){
+    const leave = Math.ceil(n / 3); let seen = 0;
+    const code = toks.map(t => { if (!t.blank) return t.s; seen++; return seen > n - leave ? '___' : t.s; }).join('');
+    steps.push({ text: 'Almost there. Only ' + (leave === 1 ? 'the last blank is' : 'the last ' + leave + ' blanks are') + ' left:', code });
+  }
+  return steps;
+}
+CH.forEach(c => { c.kind = 'ch'; c.ladder = buildLadder(c); });
+
+// Exercises: parse [[answer|alternative]] blanks out of the template.
+function parseTemplate(code){
+  const parts = []; const re = /\[\[(.+?)\]\]/g; let last = 0, m;
+  while ((m = re.exec(code))){
+    parts.push({ t: code.slice(last, m.index) });
+    const alts = m[1].split('|');
+    parts.push({ b: alts[0], alts });
+    last = re.lastIndex;
+  }
+  parts.push({ t: code.slice(last) });
+  return parts;
+}
+EX.forEach(e => {
+  e.kind = 'ex';
+  e.parts = parseTemplate(e.code);
+  e.blanks = e.parts.filter(p => p.b !== undefined);
+  e.full = e.parts.map(p => p.b !== undefined ? p.b : p.t).join('');
+});
+
+const ALL = [...EX, ...CH];
+const BY = Object.fromEntries(ALL.map(i => [i.id, i]));
+const listOf = kind => kind === 'ex' ? EX : CH;
+function helpMax(it){ return it.kind === 'ch' ? it.ladder.length : it.blanks.length + 1; }
+
+// Word bank: the answers plus a few look-alike decoys, in a stable shuffled order.
+const KWPOOL = ['SELECT','FROM','WHERE','AND','OR','NOT','IN','IS','NULL','LIKE','BETWEEN','ORDER','BY','GROUP','HAVING','DESC','ASC','LIMIT','DISTINCT','AS','JOIN','ON','LEFT','INSERT','INTO','VALUES','UPDATE','SET','DELETE','CREATE','TABLE','DROP','ALTER','ADD','COUNT','SUM','MIN','MAX','AVG'];
+const COLPOOL = [...new Set(TABLES.flatMap(t => t.cols.map(c => c[0])))];
+const SYMPOOL = ['%','_','<','>','=','*'];
+const LITPOOL = ['Paris','Munich','Madrid','London','Rome','Dublin'];
+function seeded(str){
+  let h = 2166136261;
+  for (const ch of str){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  h = (h >>> 0) || 1;
+  return () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+}
+function category(w){
+  if (KWPOOL.includes(w.toUpperCase())) return 'kw';
+  if (IDENT[w.toLowerCase()]) return 'col';
+  if (/^[^A-Za-z0-9]+$/.test(w)) return 'sym';
+  return 'lit';
+}
+function bankFor(ex){
+  if (ex._bank) return ex._bank;
+  const rnd = seeded(ex.id);
+  const answers = ex.blanks.map(b => b.b);
+  const taken = new Set(answers.map(a => a.toUpperCase()));
+  const cats = [...new Set(answers.map(category))];
+  const pools = { kw:KWPOOL, col:COLPOOL, sym:SYMPOOL, lit:LITPOOL };
+  const extra = (ex.decoys || []).filter(w => !taken.has(w.toUpperCase())); let guard = 0;
+  extra.forEach(w => taken.add(w.toUpperCase()));
+  while (extra.length < 3 && guard++ < 300){
+    const pool = pools[cats[extra.length % cats.length]];
+    const w = pool[Math.floor(rnd() * pool.length)];
+    if (!taken.has(w.toUpperCase())){ taken.add(w.toUpperCase()); extra.push(w); }
+  }
+  const all = [...answers, ...extra];
+  for (let i = all.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  return ex._bank = all;
+}
+
+/* ---------------- engine ---------------- */
+let engineReady = false;
+let dbn = 0;
+function freshDB(){
+  const id = 'practice' + (++dbn);
+  const db = new alasql.Database(id);
+  for (const t of TABLES){
+    db.exec('CREATE TABLE ' + t.name + ' (' + t.cols.map(c => c[0] + ' ' + c[1]).join(', ') + ')');
+    db.tables[t.name].data = t.rows.map(r => { const o = {}; t.cols.forEach((c, i) => { o[c[0]] = r[i]; }); return o; });
+  }
+  return db;
+}
+function dropDB(db){ try { delete alasql.databases[db.databaseid]; } catch(e){} }
+
+function cleanError(e){
+  let m = (e && e.message) ? e.message : String(e);
+  const t = m.match(/Table does not exist:\s*([\w.]+)/i);
+  if (t) return 'There is no table called "' + t[1] + '". The tables are: ' + TABLES.map(x => x.name).join(', ') + '.';
+  if (/^Parse error/i.test(m)){
+    const lines = m.split('\n');
+    return 'The SQL has a syntax error near the ^ mark:\n' + (lines[1] || '') + '\n' + (lines[2] || '');
+  }
+  if (/Cannot read prop|undefined is not an object|is not defined/i.test(m)){
+    return 'Something in the query points to a table, alias or column that does not exist. Check your spelling and aliases.\n(' + m + ')';
+  }
+  return m;
+}
+
+const expCache = {};
+function expected(ch){
+  if (expCache[ch.id]) return expCache[ch.id];
+  const db = freshDB();
+  try {
+    let last;
+    for (const s of splitSQL(ch.solution)) last = db.exec(canon(s));
+    expCache[ch.id] = ch.check ? db.exec(ch.check) : last;
+  } finally { dropDB(db); }
+  return expCache[ch.id];
+}
+function describe(res){
+  if (typeof res === 'number') return res + (res === 1 ? ' row affected.' : ' rows affected.');
+  if (Array.isArray(res)) return res.length + ' rows returned.';
+  return 'Statement ran.';
+}
+function toMatrix(rows){
+  const cols = []; const seen = new Set();
+  for (const r of rows) for (const k of Object.keys(r)) if (!seen.has(k)){ seen.add(k); cols.push(k); }
+  const norm = v => {
+    if (v === null || v === undefined) return '\u2205';
+    if (typeof v === 'number') return String(Math.round(v * 100) / 100);
+    if (v instanceof Date) return v.toISOString();
+    return String(v);
+  };
+  return { cols, data: rows.map(r => cols.map(c => norm(r[c]))) };
+}
+function sameBag(a, b){ const x = [...a].sort(), y = [...b].sort(); return x.length === y.length && x.every((k, i) => k === y[i]); }
+function compare(userRows, expRows, ordered, isChange){
+  const u = toMatrix(userRows), e = toMatrix(expRows);
+  if (u.data.length !== e.data.length){
+    return { ok:false, msg: isChange
+      ? 'After your statement the table has ' + u.data.length + ' rows. It should have ' + e.data.length + '.'
+      : 'Your query returned ' + u.data.length + (u.data.length === 1 ? ' row' : ' rows') + '. The answer has ' + e.data.length + '.' };
+  }
+  if (u.cols.length !== e.cols.length){
+    return { ok:false, msg:'You have the right number of rows, but ' + u.cols.length + (u.cols.length === 1 ? ' column' : ' columns') + '. The answer has ' + e.cols.length + '.' };
+  }
+  const key = r => JSON.stringify(r);
+  const keyS = r => JSON.stringify([...r].sort());
+  const ue = u.data.map(key), ee = e.data.map(key), us = u.data.map(keyS), es = e.data.map(keyS);
+  if (ordered){
+    if (ue.every((k, i) => k === ee[i]) || us.every((k, i) => k === es[i])) return { ok:true };
+    if (sameBag(ue, ee) || sameBag(us, es)) return { ok:false, msg:'Those are the right rows, but not in the right order. Check your ORDER BY.' };
+  } else if (sameBag(ue, ee) || sameBag(us, es)) return { ok:true };
+  return { ok:false, msg: isChange
+    ? 'The table doesn\'t look right yet. Check which rows your statement changed and the values you used.'
+    : 'Right number of rows and columns, but some values don\'t match. Check your conditions.' };
+}
+
+function evaluate(ch, sql){
+  const out = {};
+  const stmts = splitSQL(sql);
+  if (!stmts.length){
+    out.verdict = { ok:false, msg:'Write a SQL statement in the editor first.' };
+    out.outcome = 'The editor is empty.';
+    return out;
+  }
+  const db = freshDB();
+  let checkRows = null;
+  try {
+    const results = [];
+    for (const s of stmts) results.push(db.exec(canon(s)));
+    const last = results[results.length - 1];
+    const lastSel = [...results].reverse().find(r => Array.isArray(r));
+    if (ch.check){
+      checkRows = db.exec(ch.check);
+      if (Array.isArray(last)){ out.rows = last; }
+      else { out.message = describe(last); out.rows = checkRows; out.label = ch.checkTable + ' after your change:'; }
+    } else if (lastSel){ out.rows = lastSel; if (!Array.isArray(last)) out.message = describe(last); }
+    else { out.message = describe(last); }
+  } catch(e){ out.error = cleanError(e); }
+  finally { dropDB(db); }
+
+  if (out.error){ out.outcome = 'Running it gives this error: ' + out.error; return out; }
+  let exp;
+  try { exp = expected(ch); } catch(e){
+    out.verdict = { ok:false, msg:'The checker could not work out the expected answer for this challenge.' };
+    out.outcome = out.verdict.msg; return out;
+  }
+  if (ch.check){ out.verdict = compare(checkRows, exp, false, true); }
+  else if (!out.rows){ out.verdict = { ok:false, msg:'This challenge needs a SELECT query that returns rows.' }; }
+  else { out.verdict = compare(out.rows, exp, !!ch.ordered, false); }
+  out.outcome = out.verdict.ok ? 'It already returns the correct result.' : out.verdict.msg;
+  return out;
+}
+
+function runExerciseStatement(ex){
+  if (ex.noRun) return { message:'This statement changes the structure of the database, so there is no result table to show.' };
+  if (!engineReady) return { message:'Your answer is correct.' };
+  const db = freshDB();
+  try {
+    let last;
+    for (const s of splitSQL(ex.full)) last = db.exec(canon(s));
+    if (Array.isArray(last)) return { rows:last };
+    if (ex.check) return { message:describe(last), rows:db.exec(ex.check), label:ex.checkTable + ' after the change:' };
+    return { message:describe(last) };
+  } catch(e){ return { message:'Your answer is correct.' }; }
+  finally { dropDB(db); }
+}
+
+/* ---------------- state ---------------- */
+const LS_KEY = 'sql-practice-v1';
+let state = { solved:{}, help:{}, revealed:{}, current:null, last:{}, drafts:{}, seenEx:false };
+try {
+  const saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+  if (saved && typeof saved === 'object') state = Object.assign(state, saved);
+} catch(e){}
+state.last = state.last || {};
+for (const k in state.help) if (state.help[k] === true) state.help[k] = 1;
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+
+let remoteRef = null, writeQueued = false, writeChain = Promise.resolve();
+function saveRemote(){
+  if (!remoteRef || writeQueued) return;
+  writeQueued = true;
+  writeChain = writeChain
+    .then(() => new Promise(r => setTimeout(r, 500)))
+    .then(async () => {
+      writeQueued = false;
+      if (!remoteRef) return;
+      try { await remoteRef.set({ solved: state.solved, help: state.help, revealed: state.revealed }); }
+      catch(e){ if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) remoteRef = null; }
+    });
+}
+function persist(){ saveLocal(); saveRemote(); }
+function mergeRemote(d){
+  if (!d) return;
+  const rs = d.solved || {};
+  for (const id in rs){
+    const r = rs[id], l = state.solved[id];
+    if (r && typeof r.pts === 'number' && (!l || r.pts > l.pts)) state.solved[id] = { pts:r.pts, how:r.how };
+  }
+  const rh = d.help || {};
+  for (const id in rh){ const v = rh[id] === true ? 1 : (Number(rh[id]) || 0); state.help[id] = Math.max(state.help[id] || 0, v); }
+  for (const id in (d.revealed || {})) state.revealed[id] = true;
+}
+
+let curId = BY[state.current] ? state.current : EX[0].id;
+if (!state.seenEx){
+  if (BY[state.current] && BY[state.current].kind === 'ch') state.last.ch = state.current;
+  state.seenEx = true; curId = EX[0].id; saveLocal();
+}
+const item = () => BY[curId];
+const lastOutcome = {};
+let sampleFn = null;
+
+/* ---------------- points ---------------- */
+function totalPoints(){ let p = 0; for (const id in state.solved) if (BY[id]) p += state.solved[id].pts || 0; return p; }
+function worthAt(it, k){ return Math.round(groupOf(it).pts * FACTORS[Math.min(3, k)]); }
+function worthNow(it){ return state.revealed[it.id] ? 0 : worthAt(it, state.help[it.id] || 0); }
+function award(it){
+  if (state.solved[it.id]) return 'already';
+  const k = state.help[it.id] || 0;
+  const how = state.revealed[it.id] ? 'solution' : k > 0 ? 'help' : 'clean';
+  const pts = worthNow(it);
+  state.solved[it.id] = { pts, how };
+  persist();
+  if (pts > 0) showGain(pts);
+  renderScore(); renderSide(); renderMeta();
+  return pts;
+}
+
+/* ---------------- challenge editor ---------------- */
+const editor = $('#sql'), hl = $('#hl'), hlPre = hl.parentElement;
+function updateHL(){ hl.innerHTML = highlight(editor.value) + '\n'; syncScroll(); }
+function syncScroll(){ hlPre.scrollTop = editor.scrollTop; hlPre.scrollLeft = editor.scrollLeft; }
+let draftTimer = null;
+editor.addEventListener('input', () => { updateHL(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraftNow, 400); });
+editor.addEventListener('scroll', syncScroll);
+editor.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); primary(); } });
+function saveDraftNow(){
+  clearTimeout(draftTimer);
+  const it = item(); if (!it) return;
+  if (it.kind === 'ch') state.drafts[it.id] = editor.value;
+  else state.drafts[it.id] = { vals: blankEls().map(b => b.value), given: exDraft(it).given };
+  saveLocal();
+}
+if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) $('#kbd').textContent = '\u2318 + Enter to run';
+
+/* ---------------- exercise blanks ---------------- */
+let activeBlank = null;
+const blankEls = () => [...document.querySelectorAll('#fill .blank')];
+function exDraft(ex){
+  const d = state.drafts[ex.id];
+  if (d && typeof d === 'object' && Array.isArray(d.vals)) return { vals: d.vals, given: Array.isArray(d.given) ? d.given : [] };
+  return { vals: ex.blanks.map(() => ''), given: [] };
+}
+const normAns = s => String(s).trim().replace(/\s+/g, ' ').replace(/^['"]+|['"]+$/g, '').toUpperCase();
+const blankRight = (ex, i, v) => ex.blanks[i].alts.some(a => normAns(a) === normAns(v));
+
+function renderExercise(ex){
+  const d = exDraft(ex);
+  let bi = 0;
+  $('#fill').innerHTML = ex.parts.map(p => {
+    if (p.t !== undefined) return highlight(p.t);
+    const i = bi++; const w = Math.max(p.b.length, 3) + 1;
+    return '<input class="blank" data-i="' + i + '" style="width:calc(' + w + 'ch + 14px)" aria-label="Blank ' + (i + 1) + ' of ' + ex.blanks.length + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">';
+  }).join('');
+  const els = blankEls();
+  els.forEach((b, i) => {
+    b.value = d.vals[i] || '';
+    if (d.given.includes(i)){ b.value = ex.blanks[i].b; b.readOnly = true; b.classList.add('given'); }
+  });
+  applyLetterHints(ex);
+  $('#bank').innerHTML = bankFor(ex).map(w => '<button class="chip" draggable="true" data-w="' + esc(w) + '" aria-pressed="false">' + esc(w) + '</button>').join('');
+  updateChips();
+  setActive(firstEmpty());
+}
+function applyLetterHints(ex){
+  const on = (state.help[ex.id] || 0) >= 2;
+  blankEls().forEach((b, i) => {
+    const a = ex.blanks[i].b;
+    b.placeholder = on ? a[0] + '_'.repeat(Math.max(0, a.length - 1)) : '';
+  });
+}
+function firstEmpty(){ const i = blankEls().findIndex(b => !b.readOnly && !b.value.trim()); return i < 0 ? null : i; }
+function setActive(i){
+  activeBlank = i;
+  blankEls().forEach((b, j) => b.classList.toggle('target', j === i));
+}
+function updateChips(){
+  const counts = {};
+  blankEls().forEach(b => { const v = b.value.trim().toUpperCase(); if (v) counts[v] = (counts[v] || 0) + 1; });
+  document.querySelectorAll('#bank .chip').forEach(c => {
+    const k = c.dataset.w.toUpperCase();
+    const used = counts[k] > 0; if (used) counts[k]--;
+    c.classList.toggle('used', used); c.setAttribute('aria-pressed', String(used));
+  });
+}
+function putWord(b, w){
+  b.value = w; b.classList.remove('right', 'wrong');
+  updateChips(); saveDraftNow();
+}
+function placeWord(w, chip){
+  const els = blankEls();
+  if (chip && chip.classList.contains('used')){
+    const k = w.toUpperCase();
+    for (let i = els.length - 1; i >= 0; i--){
+      if (!els[i].readOnly && els[i].value.trim().toUpperCase() === k){ putWord(els[i], ''); setActive(i); return; }
+    }
+  }
+  let t = activeBlank != null && els[activeBlank] && !els[activeBlank].readOnly ? activeBlank : null;
+  if (t == null) t = firstEmpty();
+  if (t == null) return;
+  putWord(els[t], w);
+  const next = els.findIndex((b, j) => j > t && !b.readOnly && !b.value.trim());
+  setActive(next >= 0 ? next : firstEmpty());
+}
+$('#bank').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) placeWord(c.dataset.w, c); });
+$('#bank').addEventListener('dragstart', e => { const c = e.target.closest('.chip'); if (c) e.dataTransfer.setData('text/plain', c.dataset.w); });
+const fill = $('#fill');
+fill.addEventListener('focusin', e => { const b = e.target.closest('.blank'); if (b) setActive(+b.dataset.i); });
+fill.addEventListener('input', e => { const b = e.target.closest('.blank'); if (b){ b.classList.remove('right', 'wrong'); updateChips(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraftNow, 300); } });
+fill.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.blank')){ e.preventDefault(); primary(); } });
+fill.addEventListener('dragover', e => { const b = e.target.closest('.blank'); if (b && !b.readOnly){ e.preventDefault(); b.classList.add('over'); } });
+fill.addEventListener('dragleave', e => { const b = e.target.closest('.blank'); if (b) b.classList.remove('over'); });
+fill.addEventListener('drop', e => {
+  const b = e.target.closest('.blank'); if (!b || b.readOnly) return;
+  e.preventDefault(); b.classList.remove('over');
+  const w = e.dataTransfer.getData('text/plain'); if (!w) return;
+  putWord(b, w); setActive(firstEmpty());
+});
+
+function submitExercise(){
+  const ex = item(), els = blankEls();
+  saveDraftNow();
+  if (els.every(b => !b.value.trim())){ renderVerdict({ miss:'Fill in the blanks first. Tap words in the word bank or type them in.' }); return; }
+  let right = 0;
+  els.forEach((b, i) => { const ok = blankRight(ex, i, b.value); b.classList.toggle('right', ok); b.classList.toggle('wrong', !ok); if (ok) right++; });
+  if (right === els.length){
+    const gained = award(ex);
+    renderVerdict({ gained });
+    renderRows(runExerciseStatement(ex));
+  } else {
+    const wrong = els.length - right;
+    renderVerdict({ miss: right + ' of ' + els.length + ' blanks are right. ' + (wrong === 1 ? 'The one in red needs' : 'The ones in red need') + ' another look.' });
+  }
+}
+
+/* ---------------- rendering ---------------- */
+function renderScore(){
+  const pts = totalPoints();
+  const solved = Object.keys(state.solved).filter(id => BY[id]).length;
+  $('#pts').textContent = pts;
+  let li = 0; LEVELS.forEach((l, i) => { if (pts >= l[0]) li = i; });
+  $('#levelName').textContent = LEVELS[li][1];
+  const next = LEVELS[li + 1];
+  const pct = next ? (pts - LEVELS[li][0]) / (next[0] - LEVELS[li][0]) * 100 : 100;
+  $('#levelBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
+  $('#levelSub').textContent = solved + ' of ' + ALL.length + ' solved';
+  $('#ptsPill').setAttribute('aria-label', pts + ' points, level ' + LEVELS[li][1]);
+  for (const k of ['ex', 'ch']){
+    const list = listOf(k);
+    $('#count-' + k).textContent = list.filter(i => state.solved[i.id]).length + ' / ' + list.length;
+  }
+}
+
+function renderSide(){
+  const kind = item().kind;
+  for (const k of ['ex', 'ch']) $('#tab-' + k).setAttribute('aria-selected', String(k === kind));
+  $('#trackIntro').textContent = TRACKS[kind].intro;
+  const list = listOf(kind);
+  $('#sideList').innerHTML = GROUPS.filter(g => g.kind === kind).map(g => {
+    const items = list.filter(c => c.group === g.id).map(c => {
+      const s = state.solved[c.id];
+      let cls = '', sr = 'not solved', badge = '';
+      if (s){
+        cls = s.how === 'clean' ? 'done' : s.how === 'help' ? 'helped' : 'shown';
+        sr = s.how === 'clean' ? 'solved' : s.how === 'help' ? 'solved with help' : 'solved with the solution';
+        badge = '<span class="earned">' + s.pts + '</span>';
+      }
+      const act = c.id === curId;
+      return '<li><button class="item' + (act ? ' active' : '') + '" data-id="' + c.id + '"' + (act ? ' aria-current="page"' : '') + '>' +
+        '<span class="dot ' + cls + '" aria-hidden="true"></span><span class="iname">' + esc(c.title) + '</span>' + badge +
+        '<span class="sr">, ' + sr + '</span></button></li>';
+    }).join('');
+    return '<div class="grp"><h2 class="gh"><span>' + g.name + '</span><span class="gp">' + g.pts + ' pts each</span></h2><ul>' + items + '</ul></div>';
+  }).join('');
+}
+
+function renderMeta(){
+  const it = item(), base = groupOf(it).pts, s = state.solved[it.id];
+  const k = state.help[it.id] || 0, max = helpMax(it);
+  $('#worth').textContent = s ? 'Earned ' + s.pts + ' pts' : 'Worth ' + worthNow(it) + ' pts';
+  let r;
+  if (s) r = s.how === 'clean' ? 'Solved on your own. Nice work.' : s.how === 'help' ? 'Solved with help.' : 'Solved with the solution. Try the next one on your own.';
+  else if (state.revealed[it.id]) r = 'You opened the solution, so this one is worth 0 pts.';
+  else if (k === 0) r = 'Worth ' + base + ' pts on your own. Each Help press gives a bigger clue (' + max + ' in total) and lowers the points a bit more. Solution gives 0.';
+  else if (k < max){
+    const nextPts = worthAt(it, k + 1);
+    r = 'Hints used: ' + k + ' of ' + max + '. ' + (nextPts < worthNow(it) ? 'The next one drops this to ' + nextPts + ' pts.' : 'More hints won\'t lower the points any further.');
+  }
+  else r = 'You\'ve used every hint. If you\'re still stuck, Solution shows the full answer for 0 pts.';
+  $('#rules').textContent = r;
+  const list = listOf(it.kind), idx = list.indexOf(it);
+  $('#prevBtn').disabled = idx === 0;
+  $('#nextBtn').disabled = idx === list.length - 1;
+  const hb = $('#helpBtn');
+  hb.disabled = k >= max;
+  hb.textContent = k >= max ? 'No more hints' : k === 0 ? 'Help' : 'More help';
+  $('#primaryBtn').disabled = it.kind === 'ch' && !engineReady;
+}
+
+function renderDB(){
+  $('#dbTables').innerHTML = TABLES.map(t =>
+    '<details class="tbl"><summary><span class="tname">' + t.name + '</span><span>' + t.rows.length + '</span></summary>' +
+    '<ul class="cols">' + t.cols.map(c => '<li><span>' + c[0] + '</span><span>' + (c[1] === 'STRING' ? 'TEXT' : c[1]) + '</span></li>').join('') + '</ul>' +
+    '<button class="prev" data-table="' + t.name + '">Preview rows</button></details>'
+  ).join('');
+}
+
+function cell(v, dec){
+  if (v === null || v === undefined) return '<span class="null">NULL</span>';
+  if (typeof v === 'number') return dec ? (Math.round(v * 100) / 100).toFixed(2) : String(v);
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (v instanceof Date) return esc(v.toISOString().slice(0, 10));
+  if (typeof v === 'object') return esc(JSON.stringify(v));
+  return esc(v);
+}
+function tableHTML(rows){
+  if (!rows.length) return '<p class="empty">No rows returned.</p>';
+  const { cols } = toMatrix(rows);
+  const dec = cols.map(c => rows.some(r => typeof r[c] === 'number' && !Number.isInteger(r[c])));
+  return '<div class="scroll"><table class="rt"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + cols.map((c, i) => '<td>' + cell(r[c], dec[i]) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+function emptyColumnWarning(rows){
+  if (!rows || !rows.length) return '';
+  const { cols } = toMatrix(rows);
+  const bad = cols.filter(c => rows.every(r => r[c] === undefined));
+  if (!bad.length) return '';
+  return '<p class="warnline">' + bad.map(b => '<strong>' + esc(b) + '</strong>').join(', ') +
+    (bad.length === 1 ? ' is' : ' are') + ' empty in every row. That usually means the column name is misspelled or belongs to a different table.</p>';
+}
+
+function renderVerdict(v){
+  const it = item(), list = listOf(it.kind), idx = list.indexOf(it);
+  let h = '';
+  if (v.error) h = '<div class="banner err"><p><strong>Error.</strong></p><pre>' + esc(v.error) + '</pre></div>';
+  else if (v.miss) h = '<div class="banner miss"><p><strong>Not quite yet.</strong> ' + esc(v.miss) + '</p></div>';
+  else if (v.gained !== undefined){
+    const isLast = idx === list.length - 1;
+    const label = 'Next ' + TRACKS[it.kind].name.toLowerCase();
+    let msg;
+    if (v.gained === 'already') msg = '<strong>Correct.</strong> You already have the points for this one.';
+    else if (v.gained > 0) msg = '<strong>Correct!</strong> +' + v.gained + (v.gained === 1 ? ' point.' : ' points.');
+    else msg = '<strong>That\'s the answer.</strong> No points this time, since the solution was shown.';
+    let btn = isLast ? '' : '<button class="btn run small" id="goNext">' + label + '</button>';
+    if (isLast && it.kind === 'ex'){ msg += ' That was the last exercise. Ready for the challenges?'; btn = '<button class="btn run small" id="goTrack">Go to challenges</button>'; }
+    else if (isLast) msg += ' That was the last challenge.';
+    h = '<div class="banner ok"><p>' + msg + '</p>' + btn + '</div>';
+  }
+  $('#verdict').innerHTML = h;
+  const gn = $('#goNext'); if (gn) gn.onclick = () => openItem(list[idx + 1].id, true);
+  const gt = $('#goTrack'); if (gt) gt.onclick = () => switchTrack('ch');
+}
+function renderRows(r){
+  let h = '';
+  if (r.message) h += '<p class="count">' + esc(r.message) + '</p>';
+  if (r.rows){
+    if (r.label) h += '<p class="sublabel">' + esc(r.label) + '</p>';
+    h += '<p class="count">Number of Records: ' + r.rows.length + '</p>';
+    h += emptyColumnWarning(r.rows);
+    h += tableHTML(r.rows);
+  }
+  $('#result').innerHTML = h || '<p class="empty">Nothing to show.</p>';
+}
+
+function showGain(n){
+  const g = $('#gain'), p = $('#ptsPill');
+  g.textContent = '+' + n;
+  g.classList.remove('show'); void g.offsetWidth; g.classList.add('show');
+  p.classList.add('bump'); setTimeout(() => p.classList.remove('bump'), 220);
+}
+
+/* ---------------- help ladder ---------------- */
+function renderHelp(){
+  const it = item(), k = state.help[it.id] || 0;
+  $('#helpbox').hidden = k === 0;
+  if (k === 0) return;
+  let items = [];
+  if (it.kind === 'ch'){
+    items = it.ladder.slice(0, k).map(s =>
+      '<li><p class="slabel">' + s.text + '</p>' + (s.code ? '<pre>' + hlGaps(s.code) + '</pre>' : '') + '</li>');
+  } else {
+    items.push('<li><p class="slabel">' + esc(it.hint) + '</p></li>');
+    if (k >= 2) items.push('<li><p class="slabel">The first letter of each missing word is now shown in its blank.</p></li>');
+    exDraft(it).given.forEach(i => items.push('<li><p class="slabel">Blank ' + (i + 1) + ' is filled in for you.</p></li>'));
+  }
+  $('#steps').innerHTML = items.join('');
+  $('#askBtn').hidden = !(sampleFn && it.kind === 'ch');
+}
+function pressHelp(){
+  const it = item(), k = state.help[it.id] || 0;
+  if (k >= helpMax(it)) return;
+  state.help[it.id] = k + 1;
+  if (it.kind === 'ex'){
+    if (k + 1 === 2) applyLetterHints(it);
+    if (k + 1 >= 3) revealOneBlank(it);
+  }
+  persist(); renderHelp(); renderMeta();
+  const last = $('#steps').lastElementChild;
+  if (last) last.scrollIntoView({ block:'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+function revealOneBlank(ex){
+  const els = blankEls(), d = exDraft(ex);
+  let i = els.findIndex((b, j) => !d.given.includes(j) && !blankRight(ex, j, b.value));
+  if (i < 0) i = els.findIndex((b, j) => !d.given.includes(j));
+  if (i < 0) return;
+  d.given.push(i);
+  const b = els[i];
+  b.value = ex.blanks[i].b; b.readOnly = true; b.classList.remove('right', 'wrong', 'target'); b.classList.add('given');
+  state.drafts[ex.id] = { vals: els.map(x => x.value), given: d.given };
+  saveLocal(); updateChips(); setActive(firstEmpty());
+}
+
+function showSolution(){
+  const it = item();
+  if (!state.solved[it.id] && !state.revealed[it.id]){ state.revealed[it.id] = true; persist(); }
+  if (it.kind === 'ch'){
+    editor.value = it.solution; updateHL(); saveDraftNow();
+    $('#solCode').innerHTML = highlight(it.solution);
+  } else {
+    blankEls().forEach((b, i) => { b.value = it.blanks[i].b; });
+    updateChips(); saveDraftNow();
+    $('#solCode').innerHTML = highlight(it.full);
+  }
+  $('#solExplain').innerHTML = it.explain;
+  $('#solbox').hidden = false;
+  renderMeta();
+  primary();
+}
+
+/* ---------------- Ask Claude (challenges) ---------------- */
+function schemaText(){
+  return TABLES.map(t => t.name + '(' + t.cols.map(c => c[0] + ' ' + (c[1] === 'STRING' ? 'TEXT' : c[1])).join(', ') + ')').join('\n');
+}
+function aiFormat(t){ return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+let aiCtl = null;
+async function askClaude(){
+  const it = item();
+  if (!sampleFn || it.kind !== 'ch') return;
+  const out = $('#aiOut'), btn = $('#askBtn');
+  let outcome = 'They have not run it yet.';
+  if (engineReady){ const r = evaluate(it, editor.value); outcome = r.outcome; }
+  const prompt =
+    'You are a friendly SQL tutor on a practice website. A student is stuck on a challenge. ' +
+    'The site runs AlaSQL, an in-browser engine that understands standard SQL (similar to SQLite or MySQL).\n\n' +
+    'Tables:\n' + schemaText() + '\n\n' +
+    'Challenge: ' + stripTags(it.task) + '\n\n' +
+    'Student\'s current SQL:\n' + (editor.value.trim() || '(empty)') + '\n\n' +
+    'What happens when it runs: ' + outcome + '\n\n' +
+    'Reply in at most 4 short sentences of plain text. Explain what is wrong or missing and what to try next. ' +
+    'Do not write the full corrected query; at most show one small clause in backticks. No headings or lists.';
+  if (aiCtl) aiCtl.abort();
+  aiCtl = new AbortController();
+  out.hidden = false; out.classList.add('thinking'); out.textContent = 'Thinking…';
+  btn.disabled = true;
+  try {
+    const { text } = await sampleFn(prompt, {
+      modelTier:'quick', signal: aiCtl.signal,
+      onText: ({ text }) => { out.classList.remove('thinking'); out.innerHTML = aiFormat(text); }
+    });
+    out.classList.remove('thinking'); out.innerHTML = aiFormat(text);
+  } catch(e){
+    out.classList.remove('thinking');
+    const code = e && e.code;
+    if (code === 'cancelled'){ /* superseded */ }
+    else if (['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(code)){
+      sampleFn = null; btn.hidden = true; out.textContent = 'Asking Claude isn\'t available here. The hints above still work.';
+    } else if (code === 'rate_limited'){ out.textContent = 'Too many requests right now. Try again in a minute.'; }
+    else if (code === 'session_expired'){ out.textContent = 'Sign in to Claude again to use this.'; }
+    else { out.textContent = (e && e.text ? e.text + '\n\n' : '') + 'Couldn\'t reach Claude. Try again.'; }
+  } finally { btn.disabled = false; }
+}
+
+/* ---------------- actions ---------------- */
+function runChallenge(){
+  if (!engineReady) return;
+  saveDraftNow();
+  const ch = item();
+  const r = evaluate(ch, editor.value);
+  lastOutcome[ch.id] = r.outcome;
+  if (r.error){ renderVerdict({ error:r.error }); $('#result').innerHTML = '<p class="empty">Fix the error above and run again.</p>'; return; }
+  if (r.verdict.ok) renderVerdict({ gained: award(ch) });
+  else renderVerdict({ miss: r.verdict.msg });
+  if (r.rows || r.message) renderRows(r); else $('#result').innerHTML = '<p class="empty">' + TRACKS.ch.empty + '</p>';
+}
+function primary(){ item().kind === 'ch' ? runChallenge() : submitExercise(); }
+
+function openItem(id, scrollTop){
+  if (!BY[id]) return;
+  if (item()) saveDraftNow();
+  curId = id; state.current = id;
+  const it = item();
+  state.last[it.kind] = id; saveLocal();
+  const list = listOf(it.kind), idx = list.indexOf(it);
+  $('#crumb').textContent = TRACKS[it.kind].name + ' ' + (idx + 1) + ' of ' + list.length;
+  $('#title').textContent = it.title;
+  $('#diff').textContent = groupOf(it).name;
+  $('#task').innerHTML = '<p>' + it.task + '</p>' +
+    (it.kind === 'ch' && it.check ? '<p>You can run your statement as many times as you like. The check looks at the ' + it.checkTable + ' table afterwards.</p>' : '');
+  const isCh = it.kind === 'ch';
+  $('#chView').hidden = !isCh; $('#exView').hidden = isCh;
+  $('#clearBtn').hidden = isCh; $('#kbd').hidden = !isCh;
+  $('#primaryBtn').textContent = isCh ? 'Run SQL' : 'Submit answer';
+  if (isCh){ const d = state.drafts[id]; editor.value = typeof d === 'string' ? d : ''; updateHL(); }
+  else renderExercise(it);
+  $('#solbox').hidden = true; $('#aiOut').hidden = true; $('#aiOut').textContent = '';
+  if (aiCtl){ aiCtl.abort(); aiCtl = null; }
+  $('#verdict').innerHTML = '';
+  $('#result').innerHTML = '<p class="empty">' + TRACKS[it.kind].empty + '</p>';
+  renderHelp(); renderMeta(); renderSide();
+  closeDrawer();
+  if (scrollTop) window.scrollTo({ top:0 });
+}
+function switchTrack(kind){
+  if (item().kind === kind) return;
+  const target = state.last[kind] && BY[state.last[kind]] ? state.last[kind] : (listOf(kind).find(i => !state.solved[i.id]) || listOf(kind)[0]).id;
+  openItem(target, true);
+}
+
+/* ---------------- wiring ---------------- */
+$('#primaryBtn').onclick = primary;
+$('#helpBtn').onclick = pressHelp;
+$('#solBtn').onclick = showSolution;
+$('#askBtn').onclick = askClaude;
+$('#clearBtn').onclick = () => {
+  blankEls().forEach(b => { if (!b.readOnly) b.value = ''; b.classList.remove('right', 'wrong'); });
+  updateChips(); saveDraftNow(); setActive(firstEmpty()); $('#verdict').innerHTML = '';
+};
+$('#prevBtn').onclick = () => { const l = listOf(item().kind), i = l.indexOf(item()); if (i > 0) openItem(l[i - 1].id, true); };
+$('#nextBtn').onclick = () => { const l = listOf(item().kind), i = l.indexOf(item()); if (i < l.length - 1) openItem(l[i + 1].id, true); };
+$('#sideList').addEventListener('click', e => { const b = e.target.closest('.item'); if (b) openItem(b.dataset.id, true); });
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTrack(t.dataset.kind));
+$('#dbTables').addEventListener('click', e => {
+  const b = e.target.closest('.prev'); if (!b || !engineReady) return;
+  const db = freshDB();
+  try {
+    const rows = db.exec('SELECT * FROM ' + b.dataset.table);
+    $('#verdict').innerHTML = '';
+    $('#result').innerHTML = '<p class="sublabel">Preview of ' + esc(b.dataset.table) + ' (not checked as an answer):</p><p class="count">Number of Records: ' + rows.length + '</p>' + tableHTML(rows);
+    $('#result').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start' });
+  } finally { dropDB(db); }
+});
+
+let resetArmed = null;
+$('#resetBtn').onclick = () => {
+  const b = $('#resetBtn');
+  if (!resetArmed){
+    b.textContent = 'Click again to erase all points'; b.classList.add('armed');
+    resetArmed = setTimeout(() => { resetArmed = null; b.textContent = 'Reset progress'; b.classList.remove('armed'); }, 3500);
+    return;
+  }
+  clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Reset progress'; b.classList.remove('armed');
+  state.solved = {}; state.help = {}; state.revealed = {}; state.drafts = {}; state.last = {};
+  persist(); renderScore();
+  curId = null; openItem(EX[0].id, true);
+};
+
+const side = $('#side'), scrim = $('#scrim'), menuBtn = $('#menuBtn');
+function closeDrawer(){ side.classList.remove('open'); scrim.classList.remove('show'); menuBtn.setAttribute('aria-expanded', 'false'); }
+menuBtn.onclick = () => {
+  const open = !side.classList.contains('open');
+  side.classList.toggle('open', open); scrim.classList.toggle('show', open); menuBtn.setAttribute('aria-expanded', String(open));
+  if (open){ const a = side.querySelector('.item.active'); if (a) a.focus(); }
+};
+scrim.onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && side.classList.contains('open')){ closeDrawer(); menuBtn.focus(); } });
+
+if (matchMedia('(max-width:1180px)').matches) $('#dbpanel').open = false;
+
+/* ---------------- boot ---------------- */
+renderDB(); renderScore();
+{ const start = curId; curId = null; openItem(start, false); }
+
+const FALLBACKS = [
+  'https://cdn.jsdelivr.net/npm/alasql@4.0.0/dist/alasql.min.js',
+  'https://cdn.jsdelivr.net/npm/alasql@1.7.3/dist/alasql.min.js'
+];
+function loadEngine(i){
+  return new Promise((resolve, reject) => {
+    if (window.alasql) return resolve();
+    if (i >= FALLBACKS.length) return reject();
+    const s = document.createElement('script');
+    s.src = FALLBACKS[i];
+    s.onload = () => window.alasql ? resolve() : loadEngine(i + 1).then(resolve, reject);
+    s.onerror = () => loadEngine(i + 1).then(resolve, reject);
+    document.head.appendChild(s);
+  });
+}
+loadEngine(0).then(() => { engineReady = true; renderMeta(); }).catch(() => {
+  $('#verdict').innerHTML = '<div class="banner err"><p><strong>The SQL engine didn\'t load.</strong> Exercises still work, but challenges need it. Check your connection and reload the page.</p></div>';
+});
+
+(async () => {
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  try {
+    const [sample, db, user] = await Promise.all([window.claude.use('sample'), window.claude.use('db'), window.claude.use('user')]);
+    if (sample){ sampleFn = sample; renderHelp(); }
+    if (db && user){
+      const uid = await user.id();
+      if (!uid) return;
+      const ref = db.doc('data/users/' + uid + '/progress');
+      const snap = await ref.get();
+      const before = JSON.stringify([state.solved, state.help, state.revealed]);
+      const remoteData = snap.exists ? snap.data() : null;
+      if (remoteData) mergeRemote(remoteData);
+      remoteRef = ref;
+      const merged = JSON.stringify({ solved: state.solved, help: state.help, revealed: state.revealed });
+      if (!remoteData || merged !== JSON.stringify({ solved: remoteData.solved || {}, help: remoteData.help || {}, revealed: remoteData.revealed || {} })) saveRemote();
+      if (JSON.stringify([state.solved, state.help, state.revealed]) !== before){
+        saveLocal(); renderScore(); renderSide(); renderMeta(); renderHelp();
+        if (item().kind === 'ex') applyLetterHints(item());
+      }
+    }
+  } catch(e){ /* progress stays in this browser */ }
+})();
+
+</script>
+</body>
+</html>
