@@ -1,0 +1,2132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>SQL Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@500;700&family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="alasql.min.js"></script>
+<style>
+/* One question per screen. Green is kept for two things only: Submit and "correct". */
+:root{
+  --green:#04AA6D; --green-edge:#038A58; --green-ink:#037A4E;
+  --paper:#FFFFFF; --ink:#282A35; --muted:#5E6371;
+  --surface:#F1F4F6; --line:#D3D8DE; --mint:#E2F3EA;
+  --red:#C8342C; --red-bg:#FDECEA; --ring:rgba(40,42,53,.16);
+  --str:#9A4A1C; --num:#2759A6; --cmt:#6A737D; --scrim:rgba(24,27,36,.5);
+  --key:#CC4E00;
+  --sans:"Atkinson Hyperlegible Next","Segoe UI",Roboto,system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono","Roboto Mono","Droid Sans Mono",Menlo,Consolas,monospace;
+  --qsize:clamp(21px,4.1vh,34px);
+  --csize:clamp(17px,3.05vh,26px);
+  --tap:clamp(48px,7.4vh,64px);
+  --fit:1;
+  --btn:clamp(58px,8.6vh,74px);
+  --pad:20px;
+  color-scheme:light;
+  box-sizing:border-box;
+  height:100%;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --green-ink:#5BD69E;
+    --paper:#1B2530; --ink:#EEF1F4; --muted:#A6AFB8;
+    --surface:#243241; --line:#3A4A59; --mint:#1E3F31;
+    --red:#FF8A80; --red-bg:#3E2226; --ring:rgba(238,241,244,.2);
+    --str:#F0A58A; --num:#82AAFF; --cmt:#8B949E; --scrim:rgba(0,0,0,.6);
+  --key:#FF9F4A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --green-ink:#5BD69E;
+  --paper:#1B2530; --ink:#EEF1F4; --muted:#A6AFB8;
+  --surface:#243241; --line:#3A4A59; --mint:#1E3F31;
+  --red:#FF8A80; --red-bg:#3E2226; --ring:rgba(238,241,244,.2);
+  --str:#F0A58A; --num:#82AAFF; --cmt:#8B949E; --scrim:rgba(0,0,0,.6);
+  --key:#FF9F4A;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none !important}
+body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font:400 17px/1.4 var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+/* No accidental text selection while tapping; typing fields stay selectable. */
+.app,.win,.acct,.sheet{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+textarea,input{-webkit-user-select:text;user-select:text}
+/* Answer words, blanks and the big buttons handle every finger themselves. */
+.chip,.blank,.submit,.next{touch-action:none}
+/* No pinch-zoom on the question and green screens, so two fingers never turn into a zoom gesture. */
+.app,.q,.win,.wincenter{touch-action:pan-y}
+:focus{outline:none}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:var(--surface);padding:.04em .3em;border-radius:6px}
+.t-k,.t-f{font-weight:700}
+.t-s{color:var(--str)} .t-n{color:var(--num)} .t-c{color:var(--cmt);font-style:italic}
+
+/* ---------- question screen ---------- */
+.app{height:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column}
+.bar{flex:none;height:60px;display:flex;align-items:center;gap:10px;padding:0 12px}
+.themebtn{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:8px;min-height:46px;margin-right:auto;padding:4px 8px 4px 14px;border:0;border-radius:999px;background:var(--surface);font-size:16px;font-weight:700}
+.tbname{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbpos{flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
+.themebtn svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.me{flex:none;display:flex;align-items:center;gap:9px;min-height:46px;padding:4px 16px 4px 4px;border:0;border-radius:999px;background:var(--surface);font-size:17px;font-weight:700}
+.me b{font-weight:800;font-variant-numeric:tabular-nums}
+.avatar{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--paper);font-size:18px;font-weight:800;line-height:1}
+.avatar svg{width:62%;height:62%;fill:currentColor}
+
+.q{--fit:1;flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:calc(16px*var(--fit));padding:calc(6px*var(--fit)) var(--pad) 16px}
+.ask{flex:none;margin:0;font-size:calc(var(--qsize)*var(--fit));line-height:1.24;font-weight:700;text-wrap:pretty}
+.ask code{font-size:.84em;font-weight:700}
+.ask strong{font-weight:800}
+.ask mark.key{background:none;color:var(--key)}
+
+.code{flex:none;padding:calc(14px*var(--fit)) calc(16px*var(--fit));border-radius:16px;background:var(--surface);font:500 calc(var(--csize)*var(--fit))/1.95 var(--mono);white-space:pre-wrap;overflow-wrap:break-word}
+.blank{display:inline-block;min-width:3.4ch;margin:0 .06em;padding:0 .3ch;border:2px dashed var(--muted);border-radius:9px;background:var(--paper);font:700 1em/1.45 var(--mono);color:var(--ink);text-align:center;vertical-align:baseline}
+.blank.target{border:2px solid var(--ink);box-shadow:0 0 0 4px var(--ring)}
+.blank.filled{border-style:solid;border-color:var(--line);background:var(--mint)}
+.blank.filled.target{border-color:var(--ink)}
+.blank.right{border-style:solid;border-color:var(--green);background:var(--mint);color:var(--green-ink)}
+.blank.wrong{border-style:solid;border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.blank.given{border:2px solid transparent;background:none;color:var(--muted);cursor:default;text-decoration:underline dotted 2px;text-underline-offset:5px}
+.blank.down{transform:scale(.94)}
+.blank .ph{color:var(--muted);font-weight:500;letter-spacing:.05em}
+
+.grow{flex:1 1 0;min-height:0}
+.bank{flex:none;display:flex;flex-wrap:wrap;gap:calc(10px*var(--fit))}
+.chip{flex:1 1 auto;min-width:calc(33.333% - 7px);min-height:calc(var(--tap)*var(--fit));padding:0 12px;border:2px solid var(--line);border-bottom-width:5px;border-radius:14px;background:var(--paper);font:700 calc(var(--csize)*var(--fit))/1.15 var(--mono);color:var(--ink);transition:transform .08s,border-bottom-width .08s}
+.chip:active,.chip.down{transform:translateY(3px);border-bottom-width:2px}
+.chip.used{border-style:dashed;border-bottom-width:2px;background:none;color:var(--muted);opacity:.6}
+
+.editorbox{position:relative;flex:1 1 auto;min-height:calc(6em + 28px);font-size:calc(var(--csize)*var(--fit))}
+.editor{position:absolute;inset:0;overflow:hidden;border:2px solid var(--line);border-radius:16px;background:var(--surface)}
+.editor:focus-within{border-color:var(--ink)}
+.editor pre,.editor textarea{position:absolute;inset:0;margin:0;padding:12px 14px 58px;border:0;font:500 1em/1.5 var(--mono);letter-spacing:0;tab-size:2;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal}
+.editor pre{overflow:hidden;pointer-events:none;color:var(--ink)}
+.editor pre code{display:block;padding:0;border-radius:0;background:none;font:inherit}
+.editor textarea{width:100%;height:100%;overflow:auto;resize:none;background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--ink);scrollbar-width:none}
+.editor textarea::-webkit-scrollbar{display:none}
+.editor textarea::placeholder{color:var(--muted);-webkit-text-fill-color:var(--muted);opacity:1}
+.editor textarea::selection{background:var(--ring)}
+.tablesbtn{position:absolute;right:8px;bottom:8px;z-index:1;min-height:42px;padding:0 16px;border:2px solid var(--line);border-radius:999px;background:var(--paper);font-size:16px;font-weight:700}
+.tablesbtn:active{background:var(--surface)}
+
+.fb{flex:none;display:flex;flex-direction:column;gap:calc(6px*var(--fit))}
+.fbmsg{margin:0;font-size:calc(19px*var(--fit));line-height:1.3;font-weight:700}
+.fbmsg.bad{color:var(--red)}
+.fbmsg.info{color:var(--ink)}
+.fbpre{margin:0;max-height:5.6em;overflow:auto;padding:8px 12px;border-radius:12px;background:var(--red-bg);color:var(--ink);font:500 calc(15px*var(--fit))/1.4 var(--mono);white-space:pre}
+.acts{display:flex;flex-wrap:wrap;column-gap:24px}
+.textbtn{min-height:44px;padding:6px 0;border:0;background:none;font-size:calc(18px*var(--fit));font-weight:700;color:var(--ink);text-decoration:underline 2px;text-underline-offset:5px}
+.bar .textbtn{font-size:17px;padding:6px 10px}
+
+.submit,.next{flex:none;width:100%;height:calc(var(--btn)*max(var(--fit),.86));border:0;border-radius:18px;font-size:clamp(21px,3.2vh,26px);font-weight:800;letter-spacing:.01em;transition:transform .08s,box-shadow .08s}
+.submit{background:var(--green);color:#fff;box-shadow:inset 0 -5px 0 var(--green-edge)}
+.submit:active,.submit.down{transform:translateY(3px);box-shadow:inset 0 -2px 0 var(--green-edge)}
+.submit:focus-visible{outline-color:var(--green-edge)}
+
+.shake{animation:shake .34s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+
+/* ---------- the green screen ---------- */
+.win{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;padding:max(24px,env(safe-area-inset-top,0px)) var(--pad) max(16px,env(safe-area-inset-bottom,0px));background:var(--green);color:#fff;text-align:center}
+.wincenter{flex:1;min-height:0;width:100%;max-width:720px;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,1.6vh,16px)}
+.tick{flex:none;width:clamp(88px,15vh,132px);height:auto}
+.tick circle{fill:none;stroke:rgba(255,255,255,.4);stroke-width:5}
+.tick path{fill:none;stroke:#fff;stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.win h2{margin:0;font-size:clamp(42px,7.6vh,66px);line-height:1.05;font-weight:800;letter-spacing:-.01em}
+.winpts{margin:0;font-size:clamp(22px,3.6vh,30px);font-weight:700}
+.winrow{margin:0;font-size:19px;font-weight:700}
+.winwhy{margin:clamp(4px,1.2vh,12px) 0 0;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(0,0,0,.24);font-size:clamp(17px,2.5vh,20px);line-height:1.45;text-align:left}
+.winwhy code{background:rgba(255,255,255,.2);color:#fff}
+.next{max-width:720px;background:#fff;color:#037A4E;box-shadow:inset 0 -5px 0 rgba(0,0,0,.14)}
+.next:active,.next.down{transform:translateY(3px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.14)}
+.win :focus-visible{outline-color:#fff}
+.win.show{animation:lit .55s ease-out}
+.win.show h2{animation:pop .35s ease-out}
+.win.show .tick circle{stroke-dasharray:296;stroke-dashoffset:296;animation:draw .42s ease-out forwards}
+.win.show .tick path{stroke-dasharray:70;stroke-dashoffset:70;animation:draw .3s .22s ease-out forwards}
+@keyframes lit{from{background:#3FDC9B}to{background:var(--green)}}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ---------- stats page ---------- */
+.acct{position:fixed;inset:0;z-index:40;background:var(--paper)}
+.acctin{--fit:1;height:100%;max-width:760px;margin:0 auto;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:calc(16px*var(--fit));padding:env(safe-area-inset-top,0px) var(--pad) calc(12px + env(safe-area-inset-bottom,0px))}
+.acctbar{flex:none;height:56px;display:flex;align-items:center;margin:0 0 calc(-10px*var(--fit)) -10px}
+.back{display:inline-flex;align-items:center;gap:2px;min-height:44px;padding:0 12px 0 4px;border:0;border-radius:12px;background:none;font-size:18px;font-weight:700}
+.back svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.who{display:flex;align-items:flex-start;gap:16px}
+.avatar.big{width:calc(68px*var(--fit));height:calc(68px*var(--fit));font-size:calc(30px*var(--fit))}
+.whotext{flex:1;min-width:0}
+.name{display:block;width:100%;margin:0;padding:0 0 2px;border:0;border-bottom:2px dashed var(--line);border-radius:0;background:none;font:800 calc(27px*var(--fit))/1.2 var(--sans);color:var(--ink)}
+.name:focus{border-bottom:2px solid var(--ink)}
+.name:focus-visible{outline:none}
+.name::placeholder{color:var(--muted);opacity:1}
+.whotext .meter{margin-top:calc(10px*var(--fit))}
+.lvl{margin:2px 0 0;font-size:calc(18px*var(--fit));font-weight:700;color:var(--green-ink)}
+.meter{display:block;height:8px;border-radius:99px;background:var(--surface);overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:inherit;background:var(--green)}
+.meter.big{height:12px}
+.lvlnext{margin:6px 0 0;font-size:calc(16px*var(--fit));font-weight:600;color:var(--muted)}
+.empty{margin:0;font-size:calc(17px*var(--fit));font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(18px*var(--fit)) 14px;margin:0}
+.stat{display:flex;flex-direction:column-reverse;gap:2px}
+.stat dt{font-size:calc(15px*var(--fit));font-weight:600;line-height:1.2;color:var(--muted)}
+.stat dd{margin:0;font-size:calc(32px*var(--fit));font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat dd small{font-size:.5em;font-weight:700;color:var(--muted)}
+.track h2{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 calc(2px*var(--fit));font-size:calc(20px*var(--fit));font-weight:800}
+.track h2 span{font-size:.85em;font-weight:700;color:var(--muted)}
+.tracks{display:flex;flex-direction:column;gap:calc(18px*var(--fit))}
+.topic{display:grid;grid-template-columns:minmax(0,1fr) calc(72px*var(--fit)) 3em;align-items:center;gap:12px;width:100%;min-height:calc(38px*var(--fit));padding:0;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-size:calc(16.5px*var(--fit))}
+.topic:last-child{border-bottom:0}
+.topic:active{background:var(--surface)}
+.topic .tn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topic .tc{text-align:right;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.pagetitle{margin:0;font-size:calc(30px*var(--fit));line-height:1.1;font-weight:800}
+.themelist{display:flex;flex-direction:column}
+/* Each theme's bottom rule doubles as its progress bar. */
+.themerow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:12px;row-gap:2px;width:100%;padding:calc(9px*var(--fit)) 0 calc(10px*var(--fit)) 14px;border:0;text-align:left;
+  background:linear-gradient(var(--green),var(--green)) left bottom/var(--done,0%) 3px no-repeat,linear-gradient(var(--line),var(--line)) left bottom/100% 1px no-repeat}
+.themerow:active{background-color:var(--surface)}
+.themerow.current{box-shadow:inset 4px 0 0 var(--ink)}
+.trn{font-size:calc(19px*var(--fit));font-weight:800;line-height:1.25}
+.trc{font-size:calc(16px*var(--fit));font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.trc.done{color:var(--green-ink)}
+.tra{grid-column:1 / -1;font-size:calc(15px*var(--fit));line-height:1.3;color:var(--muted)}
+.reset{flex:none;align-self:flex-start;margin-top:auto;color:var(--muted)}
+.reset.armed{color:var(--red)}
+
+/* ---------- bottom sheet: hints, tables, results ---------- */
+.sheet{position:fixed;inset:0;z-index:50}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.panel{position:absolute;left:0;right:0;bottom:0;max-width:760px;max-height:86%;margin:0 auto;display:flex;flex-direction:column;border-radius:22px 22px 0 0;background:var(--paper);box-shadow:0 -10px 34px rgba(0,0,0,.22);animation:rise .22s ease-out}
+@keyframes rise{from{transform:translateY(28px);opacity:.3}to{transform:none;opacity:1}}
+.panelhead{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px 4px var(--pad)}
+.panelhead h2{margin:0;font-size:22px;font-weight:800}
+.panelhead .textbtn{font-size:18px;padding:6px 8px}
+.panelbody{overflow-y:auto;overscroll-behavior:contain;padding:4px var(--pad) calc(22px + env(safe-area-inset-bottom,0px));font-size:18px;line-height:1.45}
+.hints{margin:0 0 4px;padding-left:1.5em}
+.hints li{margin:0 0 14px;padding-left:.2em}
+.hints li::marker{font-weight:800}
+.hints p{margin:0}
+.hcode{margin:8px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface);font:500 16px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:break-word}
+.gap{padding:0 2px;border-radius:4px;background:var(--mint);font-weight:700}
+.hnote{margin:0 0 14px;font-size:16px;font-weight:600;color:var(--muted)}
+.sheetbtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:16px;background:var(--paper);font-size:19px;font-weight:800}
+.sheetbtn:active{background:var(--surface)}
+.tbl{padding:12px 0;border-bottom:1px solid var(--line)}
+.tbl:last-child{border-bottom:0}
+.tbl h3{margin:0 0 8px;font-size:20px;font-weight:800}
+.cols{margin:0;display:flex;flex-wrap:wrap;gap:6px}
+.cols code{padding:4px 9px;font-size:15px}
+.tbl .textbtn{font-size:16px}
+.count{margin:0 0 6px;font-weight:700}
+.sublabel{margin:0 0 4px;color:var(--muted)}
+.warnline{margin:0 0 8px;padding:8px 12px;border-radius:10px;background:var(--red-bg);font-size:16px}
+.scroll{overflow-x:auto;margin:6px 0 0;border:1px solid var(--line);border-radius:12px}
+.rt{min-width:100%;border-collapse:collapse;font:500 15px/1.4 var(--mono)}
+.rt th,.rt td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.rt th{background:var(--surface);font-weight:700}
+.rt tr:last-child td{border-bottom:0}
+.null{color:var(--muted);font-style:italic}
+
+/* ---------- short and sideways screens ---------- */
+@media (max-height:500px){
+  .bar{height:46px}
+  .acctbar{height:44px}
+  .editorbox{min-height:calc(3em + 28px)}
+  .tick{display:none}
+}
+@media (min-aspect-ratio:4/3) and (max-height:540px){
+  .app{max-width:none}
+  .q{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"ask bank" "work bank" "work fb" "work submit";column-gap:28px}
+  .ask{grid-area:ask}
+  .code{grid-area:work;align-self:start}
+  .editorbox{grid-area:work}
+  .grow{display:none}
+  .bank{grid-area:bank;align-self:end;align-content:flex-end}
+  .fb{grid-area:fb}
+  .submit{grid-area:submit}
+  .themelist{display:grid;grid-template-columns:1fr 1fr;column-gap:28px}
+}
+@media (prefers-reduced-motion: reduce){
+  .win.show,.win.show h2,.panel,.shake{animation:none}
+  .win.show .tick *{animation:none;stroke-dashoffset:0}
+  .chip,.submit,.next{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="bar">
+    <button type="button" class="themebtn" id="themeBtn">
+      <span class="tbname" id="tbName"></span><span class="tbpos" id="tbPos"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <button type="button" class="me" id="meBtn">
+      <span class="avatar" id="meAvatar" aria-hidden="true"></span>
+      <span aria-hidden="true"><b id="mePts">0</b> pts</span>
+    </button>
+  </header>
+
+  <main class="q" id="q">
+    <h1 class="ask" id="ask" tabindex="-1"></h1>
+    <div class="code" id="code" hidden></div>
+    <div class="editorbox" id="editorbox" hidden>
+      <div class="editor">
+        <pre aria-hidden="true"><code id="hl"></code></pre>
+        <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Type your SQL here" aria-label="Your SQL query"></textarea>
+        <button type="button" class="tablesbtn" id="tablesBtn">Tables</button>
+      </div>
+    </div>
+    <div class="grow" id="grow"></div>
+    <div class="bank" id="bank" hidden role="group" aria-label="Answers"></div>
+    <div class="fb" id="fb" hidden>
+      <p class="fbmsg" id="fbMsg" role="status"></p>
+      <pre class="fbpre" id="fbPre" hidden></pre>
+      <div class="acts" id="acts" hidden>
+        <button type="button" class="textbtn" id="hintBtn">Hint</button>
+        <button type="button" class="textbtn" id="resultBtn" hidden>See your result</button>
+        <button type="button" class="textbtn" id="answerBtn">Show answer</button>
+      </div>
+    </div>
+    <button type="button" class="submit" id="submitBtn">Submit</button>
+  </main>
+</div>
+
+<div class="win" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="winTitle" aria-describedby="winPts">
+  <div class="wincenter">
+    <svg class="tick" viewBox="0 0 104 104" aria-hidden="true"><circle cx="52" cy="52" r="47"/><path d="M31 54l14 14 29-31"/></svg>
+    <h2 id="winTitle">Correct!</h2>
+    <p class="winpts" id="winPts"></p>
+    <p class="winrow" id="winRow" hidden></p>
+    <p class="winwhy" id="winWhy"></p>
+  </div>
+  <button type="button" class="next" id="nextBtn">Next question</button>
+</div>
+
+<section class="acct" id="acct" hidden aria-label="Your stats">
+  <div class="acctin" id="acctIn">
+    <div class="acctbar">
+      <button type="button" class="back" id="acctBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back</button>
+    </div>
+    <div class="who">
+      <span class="avatar big" id="acctAvatar" aria-hidden="true"></span>
+      <div class="whotext">
+        <input class="name" id="nameInput" maxlength="24" placeholder="Add your name" autocomplete="off" autocapitalize="words" enterkeyhint="done" aria-label="Your name">
+        <p class="lvl" id="lvlName"></p>
+        <span class="meter big" aria-hidden="true"><i id="lvlFill"></i></span>
+        <p class="lvlnext" id="lvlNext"></p>
+      </div>
+    </div>
+    <p class="empty" id="emptyNote" hidden>Answer a question to start filling in your stats.</p>
+    <dl class="stats" id="stats"></dl>
+    <button type="button" class="textbtn reset" id="resetBtn">Reset progress</button>
+  </div>
+</section>
+
+<section class="acct" id="themes" hidden aria-labelledby="themesTitle">
+  <div class="acctin" id="themesIn">
+    <div class="acctbar">
+      <button type="button" class="back" id="themesBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back</button>
+    </div>
+    <h2 class="pagetitle" id="themesTitle">Themes</h2>
+    <div class="themelist" id="themeList"></div>
+  </div>
+</section>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="scrim" id="sheetScrim"></div>
+  <div class="panel">
+    <div class="panelhead">
+      <h2 id="sheetTitle"></h2>
+      <button type="button" class="textbtn" id="sheetClose">Close</button>
+    </div>
+    <div class="panelbody" id="sheetBody"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const TABLES = [
+  { name:'Customers', cols:[['CustomerID','INT'],['CustomerName','STRING'],['City','STRING'],['Country','STRING'],['Email','STRING']], rows:[
+    [1,'Ana Torres','Madrid','Spain','ana.torres@example.com'],
+    [2,'Lukas Becker','Berlin','Germany','lukas.becker@example.com'],
+    [3,'Chloé Martin','Paris','France','chloe.martin@example.com'],
+    [4,'Jonas Weber','Munich','Germany','jonas.weber@example.com'],
+    [5,'Priya Nair','London','UK','priya.nair@example.com'],
+    [6,'Marco Rossi','Rome','Italy',null],
+    [7,'Emma Schulz','Hamburg','Germany','emma.schulz@example.com'],
+    [8,'Oliver Smith','Manchester','UK',null],
+    [9,'Sofia Costa','Lisbon','Portugal','sofia.costa@example.com'],
+    [10,'Liam Murphy','Dublin','Ireland','liam.murphy@example.com']
+  ]},
+  { name:'Products', cols:[['ProductID','INT'],['ProductName','STRING'],['Category','STRING'],['Price','NUMBER'],['Stock','INT']], rows:[
+    [1,'Wireless Mouse','Electronics',24.99,120],
+    [2,'Mechanical Keyboard','Electronics',89.5,45],
+    [3,'USB-C Cable','Electronics',9.99,300],
+    [4,'Noise-Cancelling Headphones','Electronics',149,20],
+    [5,'SQL for Beginners','Books',32,60],
+    [6,'Clean Code Handbook','Books',41.25,35],
+    [7,'Sci-Fi Short Stories','Books',14.5,80],
+    [8,'Steel Water Bottle','Home',18.75,150],
+    [9,'Desk Lamp','Home',36.4,55],
+    [10,'Scented Candle','Home',12.3,200],
+    [11,'Standing Desk','Furniture',329,8],
+    [12,'Sticky Notes Pack','Office',4.2,500]
+  ]},
+  { name:'Orders', cols:[['OrderID','INT'],['CustomerID','INT'],['OrderDate','STRING'],['Status','STRING']], rows:[
+    [101,1,'2026-01-05','Shipped'],
+    [102,2,'2026-01-09','Shipped'],
+    [103,2,'2026-01-15','Cancelled'],
+    [104,4,'2026-02-02','Shipped'],
+    [105,5,'2026-02-11','Pending'],
+    [106,1,'2026-02-20','Shipped'],
+    [107,7,'2026-03-01','Shipped'],
+    [108,5,'2026-03-08','Cancelled'],
+    [109,9,'2026-03-14','Shipped'],
+    [110,2,'2026-03-22','Pending'],
+    [111,8,'2026-04-02','Shipped'],
+    [112,4,'2026-04-10','Shipped']
+  ]},
+  { name:'OrderItems', cols:[['OrderID','INT'],['ProductID','INT'],['Quantity','INT']], rows:[
+    [101,1,1],[101,3,2],[102,2,1],[103,4,1],[104,5,1],[104,6,1],[105,11,1],
+    [106,8,2],[106,10,3],[107,1,2],[108,9,1],[109,5,2],[110,3,4],[111,4,1],[111,1,1],[112,6,1]
+  ]},
+  { name:'Employees', cols:[['EmployeeID','INT'],['FirstName','STRING'],['LastName','STRING'],['Title','STRING'],['ManagerID','INT']], rows:[
+    [1,'Helena','Vogt','CEO',null],
+    [2,'Samir','Haddad','Sales Manager',1],
+    [3,'Grace','Kim','Sales Rep',2],
+    [4,'Tomás','Silva','Sales Rep',2],
+    [5,'Nina','Petrova','Support Lead',1],
+    [6,'Ben','Carter','Support Agent',5]
+  ]}
+];
+
+
+const EX = [
+  {id:'x-select', title:'Get every column',
+   task:'Fill in the missing words to get all columns from the <code>Customers</code> table.',
+   code:'[[SELECT]] * [[FROM]] Customers;',
+   hint:'Every query that reads data starts with the same keyword, and the table name comes after a second keyword.',
+   explain:'<code>SELECT</code> starts the query and <code>FROM</code> names the table.'},
+  {id:'x-columns', title:'Pick two columns',
+   task:'Get only the name and the city of every customer.',
+   code:'SELECT [[CustomerName]], [[City]] FROM Customers;',
+   hint:'Customers has a column for the customer\'s name and one for the city. Put those two after SELECT.',
+   explain:'List the columns you want after <code>SELECT</code>, separated by a comma.'},
+  {id:'x-distinct', decoys:['UNIQUE','ALL','DIFFERENT'], title:'No duplicates',
+   task:'List every country once, without repeats.',
+   code:'SELECT [[DISTINCT]] Country FROM Customers;',
+   hint:'One keyword placed right after SELECT removes duplicate rows.',
+   explain:'<code>DISTINCT</code> keeps only unique values.'},
+  {id:'x-where', title:'Filter rows',
+   task:'Get every customer who lives in Berlin.',
+   code:"SELECT * FROM Customers [[WHERE]] [[City]] = '[[Berlin]]';",
+   hint:'The filtering keyword comes after the table name, then the column to check, then the value.',
+   explain:'<code>WHERE</code> keeps only rows where <code>City</code> equals the text in quotes.'},
+  {id:'x-not', title:'Everything except',
+   task:'Get every customer who does not live in Germany.',
+   code:"SELECT * FROM Customers WHERE [[NOT]] Country = 'Germany';",
+   hint:'One small word flips a condition so it matches the opposite rows.',
+   explain:'<code>NOT</code> reverses the condition that follows it.'},
+  {id:'x-and', decoys:['OR','>','='], title:'Both conditions',
+   task:'Get products in the Electronics category that cost less than 30.',
+   code:"SELECT * FROM Products\nWHERE Category = 'Electronics' [[AND]] Price [[<]] 30;",
+   hint:'Both conditions must be true at the same time. You also need the symbol for "less than".',
+   explain:'<code>AND</code> needs both conditions to be true, and <code>&lt;</code> means "less than".'},
+  {id:'x-or', decoys:['AND','NOT','IN'], title:'Either condition',
+   task:'Get customers who live in Madrid or in Lisbon.',
+   code:"SELECT * FROM Customers\nWHERE City = 'Madrid' [[OR]] City = 'Lisbon';",
+   hint:'A row should match if at least one of the two conditions is true.',
+   explain:'<code>OR</code> matches a row when either condition is true.'},
+
+  {id:'x-order', title:'Sort alphabetically',
+   task:'Sort all customers by name, from A to Z.',
+   code:'SELECT * FROM Customers [[ORDER]] [[BY]] CustomerName;',
+   hint:'Sorting uses a two-word clause at the end of the query.',
+   explain:'<code>ORDER BY</code> sorts the result. A to Z is the default direction.'},
+  {id:'x-desc', decoys:['ASC','LIMIT','BY'], title:'Biggest first',
+   task:'Sort all products from most expensive to cheapest.',
+   code:'SELECT * FROM Products ORDER BY Price [[DESC]];',
+   hint:'The default sort is smallest first. Add the keyword for the reverse direction.',
+   explain:'<code>DESC</code> means descending: largest first.'},
+  {id:'x-limit', title:'Only a few rows',
+   task:'Get the 5 cheapest products.',
+   code:'SELECT * FROM Products ORDER BY [[Price]] [[LIMIT]] 5;',
+   hint:'Sort by the column that holds the cost, then cap how many rows come back.',
+   explain:'Sorting by <code>Price</code> puts the cheapest first, and <code>LIMIT 5</code> keeps the first five.'},
+  {id:'x-between', title:'A range of values',
+   task:'Get products priced from 10 to 20, including both ends.',
+   code:'SELECT * FROM Products WHERE Price [[BETWEEN]] 10 [[AND]] 20;',
+   hint:'One keyword starts the range, and the word you use to combine two conditions separates its two ends.',
+   explain:'<code>BETWEEN 10 AND 20</code> includes both 10 and 20.'},
+  {id:'x-in', decoys:['LIKE','BETWEEN','IS'], title:'One of a list',
+   task:'Get customers from Spain, Italy or Portugal.',
+   code:"SELECT * FROM Customers\nWHERE Country [[IN]] ('Spain', 'Italy', 'Portugal');",
+   hint:'A two-letter keyword checks a value against a list in parentheses.',
+   explain:'<code>IN</code> matches any value in the list.'},
+  {id:'x-like', decoys:['IN','=','_'], title:'Ends with',
+   task:'Get products whose name ends with the word Desk.',
+   code:"SELECT * FROM Products WHERE ProductName [[LIKE]] '[[%]]Desk';",
+   hint:'Pattern matching uses its own keyword, and one symbol stands for "any characters".',
+   explain:"<code>LIKE</code> matches a pattern, and <code>%</code> stands for any characters, so <code>'%Desk'</code> means \"ends with Desk\"."},
+  {id:'x-null', decoys:['NOT','EMPTY','='], title:'Missing emails',
+   task:'Get customers who have no email address.',
+   code:'SELECT * FROM Customers WHERE Email [[IS]] [[NULL]];',
+   hint:"Missing values have a special name, and you can't check them with =.",
+   explain:'<code>IS NULL</code> finds missing values.'},
+  {id:'x-notnull', decoys:['IS','NO','AND'], title:'Has an email',
+   task:'Get customers who do have an email address.',
+   code:'SELECT * FROM Customers WHERE Email IS [[NOT]] NULL;',
+   hint:'Flip the missing-value check around.',
+   explain:'<code>IS NOT NULL</code> finds rows that have a value.'},
+
+  {id:'x-min', decoys:['MAX','COUNT','AVG'], title:'Lowest value',
+   task:'Find the lowest product price.',
+   code:'SELECT [[MIN]](Price) FROM Products;',
+   hint:'There is a function that returns the smallest value in a column.',
+   explain:'<code>MIN()</code> returns the smallest value. <code>MAX()</code> does the opposite.'},
+  {id:'x-count', decoys:['SUM','MAX','AVG'], title:'Count rows',
+   task:'Count how many products are in the Books category.',
+   code:"SELECT [[COUNT]](*) FROM Products WHERE Category = 'Books';",
+   hint:'This function counts rows. The star inside it means "every row".',
+   explain:'<code>COUNT(*)</code> counts the rows that pass the <code>WHERE</code>.'},
+  {id:'x-sum', decoys:['COUNT','AVG','MAX'], title:'Add it up',
+   task:'Add up the stock of every product.',
+   code:'SELECT [[SUM]](Stock) FROM Products;',
+   hint:'This function adds together all the values in a column.',
+   explain:'<code>SUM()</code> adds up the values in a column.'},
+  {id:'x-alias', decoys:['IS','TO','ON'], title:'Rename a column',
+   task:'Show the customer names in a column called Buyer.',
+   code:'SELECT CustomerName [[AS]] Buyer FROM Customers;',
+   hint:'A two-letter keyword gives a column a new name in the result.',
+   explain:'<code>AS</code> sets the name of a column in the result.'},
+  {id:'x-group', title:'One row per group',
+   task:'Count the customers in each country.',
+   code:'SELECT Country, COUNT(*) FROM Customers [[GROUP]] [[BY]] Country;',
+   hint:'A two-word clause makes one group for each different value.',
+   explain:'<code>GROUP BY Country</code> makes one group per country, and <code>COUNT(*)</code> counts each group.'},
+  {id:'x-having', decoys:['WHERE','ORDER','LIMIT'], title:'Filter the groups',
+   task:'Show only the countries that have more than one customer.',
+   code:'SELECT Country, COUNT(*) FROM Customers\nGROUP BY Country\n[[HAVING]] COUNT(*) > 1;',
+   hint:"WHERE can't filter groups. A different keyword does that job after GROUP BY.",
+   explain:'<code>HAVING</code> filters groups after they are made.'},
+
+  {id:'x-join', title:'Join two tables',
+   task:'Show each order ID with the name of the customer who placed it.',
+   code:'SELECT Orders.OrderID, Customers.CustomerName\nFROM Orders\n[[JOIN|INNER JOIN]] Customers [[ON]] Orders.CustomerID = Customers.[[CustomerID]];',
+   hint:'One keyword brings in the second table, another starts the matching condition, and both tables share an ID column.',
+   explain:'<code>JOIN ... ON</code> pairs each order with the customer whose <code>CustomerID</code> matches.'},
+  {id:'x-leftjoin', decoys:['INNER','RIGHT','OUTER'], title:'Keep every customer',
+   task:'List every customer with their order IDs, including customers who never ordered.',
+   code:'SELECT Customers.CustomerName, Orders.OrderID\nFROM Customers\n[[LEFT]] JOIN Orders ON Customers.CustomerID = Orders.CustomerID;',
+   hint:'This kind of join keeps every row from the first table, even when nothing matches.',
+   explain:'<code>LEFT JOIN</code> keeps every customer. Customers with no orders get <code>NULL</code> in <code>OrderID</code>.'},
+
+  {id:'x-insert', title:'Add a row', check:'SELECT * FROM Customers', checkTable:'Customers',
+   task:'Add a new customer: ID 11, Ingrid Berg, from Norway.',
+   code:"[[INSERT]] [[INTO]] Customers (CustomerID, CustomerName, Country)\n[[VALUES]] (11, 'Ingrid Berg', 'Norway');",
+   hint:'Two keywords at the start mean "put into", and a third keyword introduces the new values.',
+   explain:'<code>INSERT INTO</code> names the table and columns, and <code>VALUES</code> lists the new data.'},
+  {id:'x-update', decoys:['CHANGE','INTO','VALUES'], title:'Change a value', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Set the stock of product 11 to 0.',
+   code:'[[UPDATE]] Products\n[[SET]] Stock = 0\nWHERE ProductID = 11;',
+   hint:'The first keyword names the table to change; the second says which column gets the new value.',
+   explain:'<code>UPDATE</code> picks the table and <code>SET</code> gives the new value.'},
+  {id:'x-delete', decoys:['DROP','REMOVE','INTO'], title:'Remove rows', check:'SELECT * FROM Orders', checkTable:'Orders',
+   task:'Delete every cancelled order.',
+   code:"[[DELETE]] [[FROM]] Orders WHERE Status = 'Cancelled';",
+   hint:'Two keywords: one says remove, the other points to the table the rows come from.',
+   explain:'<code>DELETE FROM</code> removes the rows that match the <code>WHERE</code>.'},
+
+  {id:'x-create', decoys:['NEW','MAKE','DROP'], title:'Create a table', noRun:true,
+   task:'Create a table called Suppliers with an ID column and a name column.',
+   code:'[[CREATE]] [[TABLE]] Suppliers (\n  SupplierID INT,\n  SupplierName VARCHAR(255)\n);',
+   hint:'Two words: make something new, and say what kind of thing it is.',
+   explain:'<code>CREATE TABLE</code> makes a new table. Each column gets a name and a data type.'},
+  {id:'x-alter', decoys:['CHANGE','INSERT','UPDATE'], title:'Add a column', noRun:true,
+   task:'Add a Phone column to the Customers table.',
+   code:'[[ALTER]] TABLE Customers\n[[ADD]] Phone VARCHAR(20);',
+   hint:'The first keyword changes a table that already exists; the second adds something to it.',
+   explain:'<code>ALTER TABLE ... ADD</code> adds a new column to an existing table.'},
+  {id:'x-drop', decoys:['DELETE','ALTER','REMOVE'], title:'Delete a table', noRun:true,
+   task:'Delete the Suppliers table completely.',
+   code:'[[DROP]] [[TABLE]] Suppliers;',
+   hint:'This keyword removes a whole table, not just its rows.',
+   explain:'<code>DROP TABLE</code> deletes the table and all of its data.'}
+];
+
+
+const CH = [
+  {id:'select-all', pts:10, title:'Select everything',
+   task:'Show every column and every row from the <code>Customers</code> table.',
+   hints:['The star symbol <code>*</code> means "all columns".','The pattern is <code>SELECT * FROM TableName;</code>'],
+   solution:'SELECT * FROM Customers;',
+   explain:'<code>SELECT *</code> picks every column. With no <code>WHERE</code> clause, every row comes back.'},
+  {id:'pick-columns', pts:10, title:'Pick columns',
+   task:'Show only the <code>ProductName</code> and <code>Price</code> of every product.',
+   hints:['Replace the <code>*</code> with the names of the columns you want.','Separate columns with commas: <code>SELECT ProductName, Price FROM ...</code>'],
+   solution:'SELECT ProductName, Price FROM Products;',
+   explain:'List the columns you want after <code>SELECT</code>, separated by commas. They come back in the order you list them.'},
+  {id:'where', pts:10, title:'Filter with WHERE',
+   task:'Find every customer who lives in <strong>Germany</strong>. Show all columns.',
+   hints:['Rows are filtered in a <code>WHERE</code> clause, which goes after <code>FROM</code>.','Text goes in single quotes: <code>WHERE Country = \'...\'</code>'],
+   solution:"SELECT * FROM Customers WHERE Country = 'Germany';",
+   explain:'<code>WHERE</code> keeps only the rows where the condition is true. Text values go inside single quotes.'},
+  {id:'order-by', pts:10, title:'Sort with ORDER BY', ordered:true,
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products that cost less than 20, cheapest first.',
+   hints:['You need two clauses after <code>FROM</code>: one to filter and one to sort.','<code>WHERE Price &lt; 20</code> goes before <code>ORDER BY Price</code>.'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price < 20\nORDER BY Price;',
+   explain:'<code>WHERE</code> filters first, then <code>ORDER BY</code> sorts what is left. Ascending (cheapest first) is the default, so <code>ASC</code> is optional.'},
+  {id:'distinct', pts:10, title:'Unique values',
+   task:'List each country that appears in <code>Customers</code>, with no duplicates.',
+   hints:['There is a keyword that goes right after <code>SELECT</code> and removes duplicate rows.','<code>SELECT DISTINCT Country FROM ...</code>'],
+   solution:'SELECT DISTINCT Country FROM Customers;',
+   explain:'<code>DISTINCT</code> removes duplicate rows from the result, so each country appears once.'},
+  {id:'count', pts:10, title:'Count rows',
+   task:'How many products are in the <code>Products</code> table? Return a single number.',
+   hints:['SQL has a function that counts rows.','Put <code>COUNT(*)</code> in the <code>SELECT</code> list.'],
+   solution:'SELECT COUNT(*) FROM Products;',
+   explain:'<code>COUNT(*)</code> counts rows. With no <code>GROUP BY</code>, it counts the whole table and returns one number.'},
+  {id:'like', pts:10, title:'Pattern matching',
+   task:'Find every product whose name starts with the letter <strong>S</strong>. Show all columns.',
+   hints:['Use <code>LIKE</code> with a pattern. The <code>%</code> symbol stands for any characters.','<code>WHERE ProductName LIKE \'S%\'</code>'],
+   solution:"SELECT * FROM Products WHERE ProductName LIKE 'S%';",
+   explain:'<code>LIKE</code> matches text patterns. <code>%</code> means "any number of characters", so <code>\'S%\'</code> means "starts with S".'},
+
+  {id:'in', pts:20, title:'Match a list with IN',
+   task:'Show every product in the <strong>Electronics</strong> or <strong>Books</strong> category. Show all columns.',
+   hints:['<code>IN</code> checks a column against a list of values.','<code>WHERE Category IN (\'Electronics\', \'Books\')</code>'],
+   solution:"SELECT * FROM Products\nWHERE Category IN ('Electronics', 'Books');",
+   explain:'<code>IN</code> is a shorter way to write <code>Category = \'Electronics\' OR Category = \'Books\'</code>.'},
+  {id:'between', pts:20, title:'Ranges with BETWEEN',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products priced from 10 to 50, including both ends.',
+   hints:['<code>BETWEEN</code> checks whether a value falls inside a range.','<code>WHERE Price BETWEEN 10 AND 50</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price BETWEEN 10 AND 50;',
+   explain:'<code>BETWEEN a AND b</code> includes both ends, so it means the same as <code>Price &gt;= 10 AND Price &lt;= 50</code>.'},
+  {id:'null', pts:20, title:'Missing values',
+   task:'Some customers have no email address on file. Show the <code>CustomerName</code> of those customers.',
+   hints:['A missing value is <code>NULL</code>, and <code>= NULL</code> never matches anything.','Use <code>WHERE Email IS NULL</code>.'],
+   solution:'SELECT CustomerName FROM Customers\nWHERE Email IS NULL;',
+   explain:'<code>NULL</code> means "no value", so it can\'t be compared with <code>=</code>. Use <code>IS NULL</code> or <code>IS NOT NULL</code> instead.'},
+  {id:'limit', pts:20, title:'Top 3', ordered:true,
+   task:'Show the <code>ProductName</code> and <code>Price</code> of the 3 most expensive products, most expensive first.',
+   hints:['Sort from most to least expensive, then keep only the first rows.','<code>ORDER BY Price DESC LIMIT 3</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nORDER BY Price DESC\nLIMIT 3;',
+   explain:'<code>ORDER BY Price DESC</code> puts the most expensive first, and <code>LIMIT 3</code> keeps only the first three rows.'},
+  {id:'group-count', pts:20, title:'Count per group',
+   task:'For each country, show the country and how many customers live there.',
+   hints:['<code>GROUP BY</code> makes one row per distinct value of a column.','<code>SELECT Country, COUNT(*) ... GROUP BY Country</code>'],
+   solution:'SELECT Country, COUNT(*) AS NumCustomers\nFROM Customers\nGROUP BY Country;',
+   explain:'<code>GROUP BY</code> makes one group per country, and <code>COUNT(*)</code> counts the rows in each group. <code>AS</code> gives the column a readable name.'},
+  {id:'having', pts:20, title:'Filter groups with HAVING',
+   task:'Show each <code>Category</code> and its average product price, but only categories where the average price is above 30.',
+   hints:['Group by <code>Category</code> and use <code>AVG(Price)</code> to get the average.','Conditions on groups go in <code>HAVING</code>, after <code>GROUP BY</code>: <code>HAVING AVG(Price) &gt; 30</code>'],
+   solution:'SELECT Category, AVG(Price) AS AvgPrice\nFROM Products\nGROUP BY Category\nHAVING AVG(Price) > 30;',
+   explain:'<code>WHERE</code> filters rows before grouping; <code>HAVING</code> filters groups after. That is why the <code>AVG</code> condition goes in <code>HAVING</code>.'},
+  {id:'inner-join', pts:20, title:'Join two tables',
+   task:'Show every order\'s <code>OrderID</code> and <code>OrderDate</code> together with the <code>CustomerName</code> of the customer who placed it.',
+   hints:['<code>Orders</code> has a <code>CustomerID</code> column that matches <code>CustomerID</code> in <code>Customers</code>.','<code>FROM Orders o JOIN Customers c ON o.CustomerID = c.CustomerID</code>'],
+   solution:'SELECT o.OrderID, o.OrderDate, c.CustomerName\nFROM Orders o\nINNER JOIN Customers c ON o.CustomerID = c.CustomerID;',
+   explain:'<code>JOIN</code> combines rows from two tables wherever the <code>ON</code> condition matches. Short aliases like <code>o</code> and <code>c</code> keep it readable.'},
+
+  {id:'insert', pts:20, title:'Add a row', check:'SELECT * FROM Customers', checkTable:'Customers',
+   task:'A new customer signed up. Add them to <code>Customers</code>: ID <strong>11</strong>, name <strong>Mia Novak</strong>, city <strong>Zagreb</strong>, country <strong>Croatia</strong>, email <strong>mia.novak@example.com</strong>.',
+   hints:['<code>INSERT INTO Customers (column, column, ...) VALUES (value, value, ...)</code>','Text values need single quotes; the ID is a number and doesn\'t.'],
+   solution:"INSERT INTO Customers (CustomerID, CustomerName, City, Country, Email)\nVALUES (11, 'Mia Novak', 'Zagreb', 'Croatia', 'mia.novak@example.com');",
+   explain:'<code>INSERT INTO</code> names the table and columns, and <code>VALUES</code> gives the new row in the same order.'},
+  {id:'update', pts:20, title:'Change a value', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'The <strong>Wireless Mouse</strong> is on sale. Set its <code>Price</code> to <strong>22.99</strong>. No other product should change.',
+   hints:['<code>UPDATE table SET column = value WHERE condition</code>','Use <code>WHERE ProductName = \'Wireless Mouse\'</code> so only that row changes.'],
+   solution:"UPDATE Products\nSET Price = 22.99\nWHERE ProductName = 'Wireless Mouse';",
+   explain:'<code>UPDATE</code> changes existing rows. The <code>WHERE</code> clause limits it to one product; without it, every price would change.'},
+  {id:'delete', pts:20, title:'Remove rows', check:'SELECT * FROM Orders', checkTable:'Orders',
+   task:'Delete every order whose <code>Status</code> is <strong>Cancelled</strong>.',
+   hints:['<code>DELETE FROM table WHERE condition</code>','<code>WHERE Status = \'Cancelled\'</code>'],
+   solution:"DELETE FROM Orders\nWHERE Status = 'Cancelled';",
+   explain:'<code>DELETE FROM</code> removes the rows that match <code>WHERE</code>. Always double-check the condition: without it, the whole table is emptied.'},
+
+  {id:'never-ordered', pts:30, title:'Customers with no orders',
+   task:'Show the <code>CustomerName</code> of every customer who has never placed an order.',
+   hints:['A <code>LEFT JOIN</code> keeps every customer, even the ones with no matching order.','For customers with no orders, the order columns are <code>NULL</code>. Filter with <code>WHERE o.OrderID IS NULL</code>.'],
+   solution:'SELECT c.CustomerName\nFROM Customers c\nLEFT JOIN Orders o ON c.CustomerID = o.CustomerID\nWHERE o.OrderID IS NULL;',
+   explain:'A <code>LEFT JOIN</code> keeps every customer. Where no order matches, the <code>Orders</code> columns are <code>NULL</code>, and that is exactly what the <code>WHERE</code> picks out.'},
+  {id:'unsold', pts:30, title:'Products nobody bought',
+   task:'Show the <code>ProductName</code> of every product that has never been ordered. Order lines are in <code>OrderItems</code>.',
+   hints:['First work out which <code>ProductID</code>s appear in <code>OrderItems</code>.','<code>WHERE ProductID NOT IN (SELECT ProductID FROM OrderItems)</code>'],
+   solution:'SELECT ProductName FROM Products\nWHERE ProductID NOT IN (SELECT ProductID FROM OrderItems);',
+   explain:'The subquery lists every <code>ProductID</code> that has been ordered. <code>NOT IN</code> keeps the products that are missing from that list.'},
+  {id:'above-avg', pts:30, title:'Above average',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of products that cost more than the average price of all products.',
+   hints:['You can put a whole query in parentheses and use its result as a value.','<code>WHERE Price &gt; (SELECT AVG(Price) FROM Products)</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price > (SELECT AVG(Price) FROM Products);',
+   explain:'The subquery in parentheses works out one number, the average price, and the outer query compares every product against it.'},
+  {id:'order-totals', pts:30, title:'Order totals',
+   task:'For each order, show the <code>OrderID</code> and the order\'s total value: the sum of <code>Quantity</code> times <code>Price</code> for its items.',
+   hints:['Join <code>OrderItems</code> to <code>Products</code> on <code>ProductID</code> so each item has a price.','<code>SELECT oi.OrderID, SUM(oi.Quantity * p.Price) ... GROUP BY oi.OrderID</code>'],
+   solution:'SELECT oi.OrderID, SUM(oi.Quantity * p.Price) AS OrderTotal\nFROM OrderItems oi\nJOIN Products p ON oi.ProductID = p.ProductID\nGROUP BY oi.OrderID;',
+   explain:'Joining gives each order line its price. Multiply by quantity, then <code>SUM</code> per order with <code>GROUP BY</code>.'},
+  {id:'repeat-customers', pts:30, title:'Repeat customers',
+   task:'Show the <code>CustomerName</code> and number of orders for every customer who has placed more than one order.',
+   hints:['Join <code>Customers</code> and <code>Orders</code>, then <code>GROUP BY</code> the customer\'s name.','Keep only the bigger groups with <code>HAVING COUNT(*) &gt; 1</code>.'],
+   solution:'SELECT c.CustomerName, COUNT(*) AS NumOrders\nFROM Customers c\nJOIN Orders o ON c.CustomerID = o.CustomerID\nGROUP BY c.CustomerName\nHAVING COUNT(*) > 1;',
+   explain:'Join customers to their orders, make one group per customer, count each group, and let <code>HAVING</code> keep counts above 1.'},
+  {id:'self-join', pts:30, title:'Who is your manager?',
+   task:'Show each employee\'s <code>FirstName</code> next to their manager\'s <code>FirstName</code>. Skip employees with no manager, and name the columns <code>Employee</code> and <code>Manager</code>.',
+   hints:['Join <code>Employees</code> to itself: one copy for the employee, one for the manager.','<code>FROM Employees e JOIN Employees m ON e.ManagerID = m.EmployeeID</code>, then use <code>AS</code> to name the columns.'],
+   solution:'SELECT e.FirstName AS Employee, m.FirstName AS Manager\nFROM Employees e\nJOIN Employees m ON e.ManagerID = m.EmployeeID;',
+   explain:'A self join uses the same table twice under different aliases: <code>e</code> for the employee and <code>m</code> for the manager.'},
+  {id:'top-spender', pts:30, title:'Best customer',
+   task:'Which customer has spent the most across all their orders? Show their <code>CustomerName</code> and total spent, in one row.',
+   hints:['You need four tables: <code>Customers</code>, <code>Orders</code>, <code>OrderItems</code> and <code>Products</code>.','After <code>GROUP BY c.CustomerName</code>, sort by the total with <code>ORDER BY ... DESC</code> and add <code>LIMIT 1</code>.'],
+   solution:'SELECT c.CustomerName, SUM(oi.Quantity * p.Price) AS TotalSpent\nFROM Customers c\nJOIN Orders o ON c.CustomerID = o.CustomerID\nJOIN OrderItems oi ON o.OrderID = oi.OrderID\nJOIN Products p ON oi.ProductID = p.ProductID\nGROUP BY c.CustomerName\nORDER BY TotalSpent DESC\nLIMIT 1;',
+   explain:'Three joins connect each customer to the prices they paid. Sum per customer, sort the totals from high to low, and keep the top row.'}
+];
+
+
+
+const LEVELS = [[0,'SQL Newbie'],[50,'Query Writer'],[140,'Filter Pro'],[250,'Join Explorer'],[380,'Data Wrangler'],[540,'SQL Master'],
+  [760,'Query Architect'],[950,'Database Guru'],[1150,'SQL Legend']];
+const FACTORS = [1, 0.75, 0.5, 0.25];
+
+/* ---------------- more questions ---------------- */
+EX.push(
+  // SELECT basics
+  {id:'x-star', decoys:['%','_','Products'], title:'Every column',
+   task:'Get every column from the <code>Orders</code> table.',
+   code:'SELECT [[*]] FROM [[Orders]];',
+   hint:'One symbol means "all columns", and the table name goes after FROM.',
+   explain:'<code>*</code> stands for every column, and <code>FROM Orders</code> names the table.'},
+  {id:'x-distinct2', decoys:['UNIQUE','ONCE','ProductName'], title:'Each category once',
+   task:'List every product category once.',
+   code:'SELECT [[DISTINCT]] [[Category]] FROM Products;',
+   hint:'The keyword that removes repeats goes right after SELECT, then the column that holds the category.',
+   explain:'<code>DISTINCT Category</code> returns each category one time.'},
+  {id:'x-calc', decoys:['+','x','&'], title:'Do some math',
+   task:"Show each product's name and its stock value: price times stock.",
+   code:'SELECT ProductName, Price [[*]] Stock\nFROM Products;',
+   hint:'SQL uses the same symbol for "multiply" as most calculators.',
+   explain:'<code>Price * Stock</code> multiplies the two columns in every row. Between two values, <code>*</code> means "times".'},
+
+  // Filtering
+  {id:'x-notequal', decoys:['=','IS','>='], title:'Not equal',
+   task:'Get every order that is not Shipped.',
+   code:"SELECT * FROM Orders\nWHERE Status [[<>|!=]] 'Shipped';",
+   hint:'There is a two-symbol operator that means "is not equal to".',
+   explain:'<code>&lt;&gt;</code> means "not equal". Many databases also accept <code>!=</code>.'},
+  {id:'x-greater', decoys:['Price','<','='], title:'More than',
+   task:'Get products with more than 100 in stock.',
+   code:'SELECT * FROM Products\nWHERE [[Stock]] [[>]] 100;',
+   hint:'Check the column that holds how many are in stock, and use the "greater than" symbol.',
+   explain:'<code>Stock &gt; 100</code> keeps the rows where the stock is above 100.'},
+
+  // More filtering
+  {id:'x-like-start', decoys:['%M','M_','%M%'], title:'Starts with',
+   task:'Get customers whose name starts with M.',
+   code:"SELECT * FROM Customers\nWHERE CustomerName LIKE '[[M%]]';",
+   hint:'The pattern begins with the letter, and the "any characters" symbol goes after it.',
+   explain:"<code>'M%'</code> means M followed by anything, so it matches names that start with M."},
+  {id:'x-between-dates', decoys:['IN','OR','LIKE'], title:'A range of dates',
+   task:'Get the orders placed in February 2026.',
+   code:"SELECT * FROM Orders\nWHERE OrderDate [[BETWEEN]] '2026-02-01' [[AND]] '2026-02-28';",
+   hint:'The same range keyword you used for prices works for dates too.',
+   explain:'<code>BETWEEN</code> works on dates as well, and both ends are included.'},
+
+  // Sorting
+  {id:'x-asc', decoys:['DESC','UP','LIMIT'], title:'Smallest first',
+   task:'Sort products by stock, smallest first. Write the direction out in full.',
+   code:'SELECT * FROM Products\nORDER BY Stock [[ASC]];',
+   hint:'The keyword for "smallest first" is the opposite of DESC.',
+   explain:'<code>ASC</code> means ascending, smallest first. It is the default, so you can also leave it out.'},
+  {id:'x-two-sort', decoys:['City','CustomerID','DESC'], title:'Sort by two columns',
+   task:'Sort customers by country, and by name within each country.',
+   code:'SELECT * FROM Customers\nORDER BY [[Country]], [[CustomerName]];',
+   hint:'List both columns after ORDER BY, separated by a comma. The first one is sorted first.',
+   explain:'Rows are sorted by <code>Country</code> first. Customers in the same country are then sorted by <code>CustomerName</code>.'},
+  {id:'x-offset', decoys:['SKIP','TOP','FROM'], title:'Skip some rows',
+   task:'Skip the 3 cheapest products and get the next 3.',
+   code:'SELECT * FROM Products\nORDER BY Price\nLIMIT 3 [[OFFSET]] 3;',
+   hint:'After LIMIT, one more keyword says how many rows to skip first.',
+   explain:'<code>OFFSET 3</code> skips the first 3 rows, and <code>LIMIT 3</code> keeps the next 3.'},
+
+  // Functions
+  {id:'x-max', decoys:['MIN','SUM','TOP'], title:'Highest value',
+   task:'Find the highest product price.',
+   code:'SELECT [[MAX]](Price) FROM Products;',
+   hint:'This function is the opposite of MIN.',
+   explain:'<code>MAX()</code> returns the largest value in a column.'},
+  {id:'x-avg', decoys:['SUM','MEAN','COUNT'], title:'Average',
+   task:'Find the average product price.',
+   code:'SELECT [[AVG]](Price) FROM Products;',
+   hint:'The function name is a short form of "average".',
+   explain:'<code>AVG()</code> adds up the values and divides by how many there are.'},
+  {id:'x-countcol', decoys:['*','CustomerID','City'], title:'Count what is there',
+   task:'Count how many customers have an email address.',
+   code:'SELECT COUNT([[Email]]) FROM Customers;',
+   hint:'Put the column that can be empty inside COUNT. Missing values are not counted.',
+   explain:'<code>COUNT(Email)</code> counts only the rows where <code>Email</code> is not <code>NULL</code>. <code>COUNT(*)</code> would count every row.'},
+  {id:'x-round', decoys:['FLOOR','0','20'], title:'Round a number',
+   task:'Show the average price rounded to 2 decimal places.',
+   code:'SELECT [[ROUND]](AVG(Price), [[2]]) FROM Products;',
+   hint:'The rounding function takes the number first and then how many decimals to keep.',
+   explain:'<code>ROUND(value, 2)</code> keeps two digits after the decimal point.'},
+  {id:'x-upper', decoys:['LOWER','CAPITAL','LEN'], title:'Capital letters',
+   task:'Show every customer name in capital letters.',
+   code:'SELECT [[UPPER]](CustomerName) FROM Customers;',
+   hint:'The function name means "upper case".',
+   explain:'<code>UPPER()</code> turns text into capital letters. <code>LOWER()</code> does the opposite.'},
+
+  // Grouping
+  {id:'x-group-sum', decoys:['COUNT','ProductName','ORDER'], title:'Total per group',
+   task:'Add up the stock for each category.',
+   code:'SELECT Category, [[SUM]](Stock) FROM Products\nGROUP BY [[Category]];',
+   hint:'Use the adding function, and group by the column you want one row for.',
+   explain:'<code>GROUP BY Category</code> makes one row per category, and <code>SUM(Stock)</code> adds up the stock inside each one.'},
+  {id:'x-group-status', decoys:['OrderID','OrderDate','CustomerID'], title:'Count per status',
+   task:'Count the orders for each status.',
+   code:'SELECT [[Status]], COUNT(*) FROM Orders\nGROUP BY [[Status]];',
+   hint:'The column you group by is usually also the one you show.',
+   explain:'Grouping by <code>Status</code> gives one row per status, and <code>COUNT(*)</code> counts the orders in each.'},
+  {id:'x-having-sum', decoys:['WHERE','COUNT','AND'], title:'Big groups only',
+   task:'Show only the categories whose total stock is over 200.',
+   code:'SELECT Category, SUM(Stock) FROM Products\nGROUP BY Category\n[[HAVING]] [[SUM]](Stock) > 200;',
+   hint:'Groups are filtered after GROUP BY with their own keyword, using the same function as in SELECT.',
+   explain:'<code>HAVING SUM(Stock) &gt; 200</code> keeps only the groups whose total is above 200.'},
+
+  // Joins
+  {id:'x-join-items', decoys:['WHERE','OrderID','AS'], title:'Order lines and products',
+   task:'Show each order line with the name of its product.',
+   code:'SELECT OrderItems.OrderID, Products.ProductName\nFROM OrderItems\nJOIN Products [[ON]] OrderItems.[[ProductID]] = Products.ProductID;',
+   hint:'The matching condition starts with a two-letter keyword, and both tables share the product ID column.',
+   explain:'<code>ON OrderItems.ProductID = Products.ProductID</code> pairs every order line with its product.'},
+  {id:'x-self', decoys:['Customers','EmployeeID','Title'], title:'A table joined to itself',
+   task:'Pair each employee with their manager.',
+   code:'SELECT e.FirstName, m.FirstName\nFROM Employees e\nJOIN [[Employees]] m ON e.[[ManagerID]] = m.EmployeeID;',
+   hint:"The table is joined to itself, and the employee's manager column points at the manager's ID.",
+   explain:"Two copies of <code>Employees</code>, called <code>e</code> and <code>m</code>. <code>e.ManagerID = m.EmployeeID</code> finds each employee's manager."},
+
+  // Subqueries
+  {id:'x-sub-in', decoys:['LIKE','BETWEEN','FROM'], title:'A list from a query',
+   task:'Get the customers who have placed at least one order.',
+   code:'SELECT CustomerName FROM Customers\nWHERE CustomerID [[IN]] ([[SELECT]] CustomerID FROM Orders);',
+   hint:'Check the ID against a list, and the list comes from a query in parentheses.',
+   explain:'The inner query lists every <code>CustomerID</code> in <code>Orders</code>. <code>IN</code> keeps the customers on that list.'},
+  {id:'x-sub-avg', decoys:['SUM','MAX','Orders'], title:'Compare with the average',
+   task:'Get the products that are cheaper than the average price.',
+   code:'SELECT * FROM Products\nWHERE Price < (SELECT [[AVG]](Price) FROM [[Products]]);',
+   hint:'The inner query works out one number: the average of the prices.',
+   explain:'The subquery returns the average price, and the outer query keeps the products below it.'},
+  {id:'x-sub-notin', decoys:['IS','NULL','Orders'], title:'Never ordered',
+   task:'Get the products nobody has ordered.',
+   code:'SELECT ProductName FROM Products\nWHERE ProductID [[NOT]] IN (SELECT ProductID FROM [[OrderItems]]);',
+   hint:'Flip IN around, and look for the table that holds the order lines.',
+   explain:'<code>NOT IN</code> keeps the products whose ID never appears in <code>OrderItems</code>.'},
+
+  // Changing data
+  {id:'x-update-math', decoys:['*','AND','HAVING'], title:'Change using the old value', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Raise the price of every Books product by 2.',
+   code:"UPDATE Products\nSET Price = Price [[+]] 2\n[[WHERE]] Category = 'Books';",
+   hint:'Add to the current price, and limit the change to the Books rows.',
+   explain:'<code>SET Price = Price + 2</code> uses the old price to work out the new one, and <code>WHERE</code> leaves the other categories alone.'},
+  {id:'x-update-two', decoys:['AND','SET',';'], title:'Change two columns', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Set both the price and the stock of product 3.',
+   code:'UPDATE Products\nSET Price = 8.99[[,]] Stock = 250\nWHERE ProductID = 3;',
+   hint:'Several columns can change at once, separated by one symbol.',
+   explain:'Separate the column changes with commas. Writing <code>AND</code> there is a common mistake.'},
+  {id:'x-delete-where', decoys:['HAVING','SET','ProductName'], title:'Delete with a filter', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Delete the products in the Office category.',
+   code:"DELETE FROM Products\n[[WHERE]] [[Category]] = 'Office';",
+   hint:'Pick the rows to remove with the usual filtering keyword and the category column.',
+   explain:'Without <code>WHERE</code>, <code>DELETE</code> would empty the whole table. Always check the condition first.'},
+
+  // Tables
+  {id:'x-primary', decoys:['UNIQUE','MAIN','ID'], title:'Primary key', noRun:true,
+   task:'Make SupplierID the primary key of the new table.',
+   code:'CREATE TABLE Suppliers (\n  SupplierID INT [[PRIMARY]] [[KEY]],\n  SupplierName VARCHAR(255)\n);',
+   hint:'Two words: the main identifier of each row is its ... key.',
+   explain:"<code>PRIMARY KEY</code> means every row needs a different <code>SupplierID</code>, and it can't be empty."},
+  {id:'x-decimal', decoys:['INT','TEXT','DATE'], title:'Numbers with decimals', noRun:true,
+   task:'Give the Price column a type that stores numbers with decimals.',
+   code:'CREATE TABLE Items (\n  ItemID INT,\n  Price [[DECIMAL]](10, 2)\n);',
+   hint:'The type is named after the decimal point.',
+   explain:'<code>DECIMAL(10, 2)</code> stores up to 10 digits, 2 of them after the decimal point. It is the usual type for money.'},
+  {id:'x-drop-col', decoys:['DELETE','REMOVE','ROW'], title:'Remove a column', noRun:true,
+   task:'Remove the Email column from the Customers table.',
+   code:'ALTER TABLE Customers\n[[DROP]] [[COLUMN]] Email;',
+   hint:'The word that deletes a whole table also removes a column, followed by the word for column.',
+   explain:'<code>ALTER TABLE ... DROP COLUMN</code> removes one column and its data from every row.'}
+);
+
+CH.push(
+  // SELECT basics
+  {id:'employee-names', pts:10, title:'Two columns',
+   task:'Show the <code>FirstName</code> and <code>LastName</code> of every employee.',
+   hints:['The names are in the <code>Employees</code> table.','Separate the columns with a comma: <code>SELECT column, column FROM ...</code>'],
+   solution:'SELECT FirstName, LastName FROM Employees;',
+   explain:'List the columns after <code>SELECT</code>, separated by a comma, and name the table after <code>FROM</code>.'},
+  {id:'order-statuses', pts:10, title:'Each status once',
+   task:'List each order <code>Status</code> once, with no duplicates.',
+   hints:['The statuses are in the <code>Orders</code> table.','One keyword right after <code>SELECT</code> removes duplicate rows.'],
+   solution:'SELECT DISTINCT Status FROM Orders;',
+   explain:'<code>DISTINCT</code> keeps one row per different value, so each status appears once.'},
+  {id:'with-tax', pts:10, title:'Calculated column',
+   task:'Show each <code>ProductName</code> and its price with 20% tax added (<code>Price</code> times 1.2), in a column called <code>WithTax</code>.',
+   hints:['You can do math in the <code>SELECT</code> list: <code>Price * 1.2</code>.','Name the new column with <code>AS WithTax</code>.'],
+   solution:'SELECT ProductName, Price * 1.2 AS WithTax FROM Products;',
+   explain:'SQL can calculate a new value for every row, and <code>AS</code> gives that column a readable name.'},
+
+  // Filtering
+  {id:'low-stock', pts:10, title:'Running low',
+   task:'Show the <code>ProductName</code> and <code>Stock</code> of products with fewer than 50 in stock.',
+   hints:['Filter with <code>WHERE</code> on the <code>Stock</code> column.','"Fewer than 50" is <code>Stock &lt; 50</code>.'],
+   solution:'SELECT ProductName, Stock FROM Products\nWHERE Stock < 50;',
+   explain:'<code>&lt;</code> keeps rows where the value is smaller. 50 itself is not included.'},
+  {id:'not-germany', pts:20, title:'Neither country',
+   task:'Show the <code>CustomerName</code> and <code>Country</code> of every customer who does not live in Germany or the UK.',
+   hints:['Use two conditions that must both be true, each with <code>&lt;&gt;</code>.',"<code>WHERE Country &lt;&gt; 'Germany' AND Country &lt;&gt; 'UK'</code>"],
+   solution:"SELECT CustomerName, Country FROM Customers\nWHERE Country <> 'Germany' AND Country <> 'UK';",
+   explain:"Both conditions must be true, so <code>AND</code> joins them. <code>NOT IN ('Germany', 'UK')</code> is another way to write it."},
+  {id:'shipped-2-or-5', pts:20, title:'Parentheses matter',
+   task:'Show every order from customer 2 or customer 5 that has the <code>Status</code> <strong>Shipped</strong>. Show all columns.',
+   hints:['You need <code>AND</code> and <code>OR</code> in the same <code>WHERE</code>. Parentheses decide what goes together.',"<code>WHERE Status = 'Shipped' AND (CustomerID = 2 OR CustomerID = 5)</code>"],
+   solution:"SELECT * FROM Orders\nWHERE Status = 'Shipped' AND (CustomerID = 2 OR CustomerID = 5);",
+   explain:'<code>AND</code> is worked out before <code>OR</code>. The parentheses make the <code>OR</code> happen first, so the Shipped check applies to both customers.'},
+
+  // More filtering
+  {id:'march-orders', pts:20, title:'Orders in March',
+   task:'Show every order placed in March 2026. Show all columns.',
+   hints:['The dates look like <code>2026-03-14</code>, so you can use a range or a pattern.',"<code>BETWEEN '2026-03-01' AND '2026-03-31'</code> or <code>LIKE '2026-03%'</code>"],
+   solution:"SELECT * FROM Orders\nWHERE OrderDate LIKE '2026-03%';",
+   explain:"Dates written as year-month-day sort correctly as text, so both <code>BETWEEN</code> and <code>LIKE '2026-03%'</code> work."},
+  {id:'uk-or-ireland', pts:20, title:'List and missing value',
+   task:'Show the <code>CustomerName</code> of every customer in the UK or Ireland who has no email address.',
+   hints:['Two conditions: the country must be in a list, and the email must be missing.',"<code>WHERE Country IN ('UK', 'Ireland') AND Email IS NULL</code>"],
+   solution:"SELECT CustomerName FROM Customers\nWHERE Country IN ('UK', 'Ireland') AND Email IS NULL;",
+   explain:'<code>IN</code> checks the country against a list, and <code>IS NULL</code> finds the missing emails. <code>AND</code> needs both.'},
+
+  // Sorting
+  {id:'sort-country-name', pts:10, ordered:true, title:'Sort by two columns',
+   task:'Show each <code>CustomerName</code> and <code>Country</code>, sorted by country and then by name.',
+   hints:['<code>ORDER BY</code> can take more than one column, separated by commas.','<code>ORDER BY Country, CustomerName</code>'],
+   solution:'SELECT CustomerName, Country FROM Customers\nORDER BY Country, CustomerName;',
+   explain:'The second column only decides the order between rows that have the same country.'},
+  {id:'recent-orders', pts:20, ordered:true, title:'Newest orders',
+   task:'Show the <code>OrderID</code> and <code>OrderDate</code> of the 3 most recent orders, newest first.',
+   hints:['The newest dates are the biggest ones, so sort from biggest to smallest.','<code>ORDER BY OrderDate DESC LIMIT 3</code>'],
+   solution:'SELECT OrderID, OrderDate FROM Orders\nORDER BY OrderDate DESC\nLIMIT 3;',
+   explain:'Sorting dates with <code>DESC</code> puts the newest first, and <code>LIMIT 3</code> keeps three.'},
+  {id:'second-cheapest', pts:20, title:'Second place',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of the second cheapest product.',
+   hints:['Sort from cheapest to most expensive, then skip one row.','<code>ORDER BY Price LIMIT 1 OFFSET 1</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nORDER BY Price\nLIMIT 1 OFFSET 1;',
+   explain:'<code>OFFSET 1</code> skips the cheapest product, and <code>LIMIT 1</code> keeps the one after it.'},
+
+  // Functions
+  {id:'shipped-count', pts:10, title:'Count with a filter',
+   task:'How many orders have the <code>Status</code> <strong>Shipped</strong>? Return a single number.',
+   hints:['<code>COUNT(*)</code> counts rows.',"Only count the rows where <code>Status = 'Shipped'</code>."],
+   solution:"SELECT COUNT(*) FROM Orders\nWHERE Status = 'Shipped';",
+   explain:'<code>WHERE</code> keeps the Shipped orders, and <code>COUNT(*)</code> counts what is left.'},
+  {id:'electronics-stock', pts:10, title:'Total with a filter',
+   task:'What is the total <code>Stock</code> of all products in the <strong>Electronics</strong> category? Return a single number.',
+   hints:['Add up the stock with <code>SUM</code>, and filter the rows with <code>WHERE</code> first.','Put <code>SUM(Stock)</code> in the <code>SELECT</code> list and keep the <code>WHERE</code> for the category.'],
+   solution:"SELECT SUM(Stock) FROM Products\nWHERE Category = 'Electronics';",
+   explain:'<code>WHERE</code> runs before the function, so <code>SUM</code> only adds up the Electronics rows.'},
+  {id:'price-range', pts:10, title:'Lowest and highest',
+   task:'Show the lowest and the highest product price, in one row.',
+   hints:['You can use two functions in the same <code>SELECT</code>, separated by a comma.','<code>SELECT MIN(Price), MAX(Price) FROM ...</code>'],
+   solution:'SELECT MIN(Price), MAX(Price) FROM Products;',
+   explain:'Each function returns one value, so together they make a single row with two columns.'},
+  {id:'avg-books', pts:10, title:'Average of a category',
+   task:'What is the average <code>Price</code> of products in the <strong>Books</strong> category?',
+   hints:['<code>AVG</code> works out an average.',"Keep only the Books rows with <code>WHERE Category = 'Books'</code>."],
+   solution:"SELECT AVG(Price) FROM Products\nWHERE Category = 'Books';",
+   explain:'The three Books prices are added up and divided by three.'},
+
+  // Grouping
+  {id:'category-max', pts:20, title:'Highest per group',
+   task:'For each <code>Category</code>, show the category and its highest <code>Price</code>.',
+   hints:['Group the products by <code>Category</code>.','Use <code>MAX(Price)</code> to get the highest price in each group.'],
+   solution:'SELECT Category, MAX(Price) AS TopPrice\nFROM Products\nGROUP BY Category;',
+   explain:'Functions like <code>MAX</code> work inside each group when you use <code>GROUP BY</code>.'},
+  {id:'one-order-customers', pts:20, title:'Exactly one',
+   task:'Show the <code>CustomerID</code> of every customer who has placed exactly one order.',
+   hints:['Group the rows in <code>Orders</code> by <code>CustomerID</code> and count each group.','Keep the groups with <code>HAVING COUNT(*) = 1</code>.'],
+   solution:'SELECT CustomerID FROM Orders\nGROUP BY CustomerID\nHAVING COUNT(*) = 1;',
+   explain:'Each customer becomes one group, and <code>HAVING</code> keeps the groups that contain a single order.'},
+  {id:'category-stock-avg', pts:20, title:'Filter on a different function',
+   task:'For each <code>Category</code> with more than two products, show the category and its average <code>Price</code>.',
+   hints:['Group by <code>Category</code> and use <code>AVG(Price)</code>.','Count the products in each group with <code>HAVING COUNT(*) &gt; 2</code>.'],
+   solution:'SELECT Category, AVG(Price) AS AvgPrice\nFROM Products\nGROUP BY Category\nHAVING COUNT(*) > 2;',
+   explain:'<code>HAVING</code> can use a different function from the <code>SELECT</code> list. Here it counts products while the result shows the average price.'},
+
+  // Joins
+  {id:'order-101', pts:30, title:"What's in an order",
+   task:'Show the <code>ProductName</code> and <code>Quantity</code> of every product in order 101.',
+   hints:['<code>OrderItems</code> has the quantities, and <code>Products</code> has the names.','Join them on <code>ProductID</code>, then add <code>WHERE oi.OrderID = 101</code>.'],
+   solution:'SELECT p.ProductName, oi.Quantity\nFROM OrderItems oi\nJOIN Products p ON oi.ProductID = p.ProductID\nWHERE oi.OrderID = 101;',
+   explain:'The join gives each order line its product name, and <code>WHERE</code> keeps the lines of order 101.'},
+  {id:'pending-customers', pts:30, title:'Who is waiting',
+   task:'Show the <code>CustomerName</code> of every customer who has a <strong>Pending</strong> order.',
+   hints:['Join <code>Customers</code> to <code>Orders</code> on <code>CustomerID</code>.',"Then keep the rows with <code>WHERE o.Status = 'Pending'</code>."],
+   solution:"SELECT c.CustomerName\nFROM Customers c\nJOIN Orders o ON c.CustomerID = o.CustomerID\nWHERE o.Status = 'Pending';",
+   explain:'The join puts each order next to its customer, and <code>WHERE</code> keeps the pending ones.'},
+  {id:'orders-per-customer', pts:30, title:'Counting with zeros',
+   task:'Show every <code>CustomerName</code> with their number of orders, including customers with no orders (they should show 0).',
+   hints:['A <code>LEFT JOIN</code> keeps customers who have no orders.','<code>COUNT(o.OrderID)</code> only counts real orders, so customers without any get 0. Group by <code>c.CustomerName</code>.'],
+   solution:'SELECT c.CustomerName, COUNT(o.OrderID) AS NumOrders\nFROM Customers c\nLEFT JOIN Orders o ON c.CustomerID = o.CustomerID\nGROUP BY c.CustomerName;',
+   explain:'<code>COUNT(*)</code> would count the empty joined row as 1. <code>COUNT(o.OrderID)</code> skips <code>NULL</code>, so customers with no orders get 0.'},
+
+  // Subqueries
+  {id:'priciest', pts:20, title:'The top price',
+   task:'Show the <code>ProductName</code> and <code>Price</code> of the product with the highest price.',
+   hints:['A subquery can work out the highest price: <code>(SELECT MAX(Price) FROM Products)</code>.','<code>WHERE Price = (SELECT MAX(Price) FROM Products)</code>'],
+   solution:'SELECT ProductName, Price FROM Products\nWHERE Price = (SELECT MAX(Price) FROM Products);',
+   explain:'The subquery finds the top price, and the outer query returns the product with that price. <code>ORDER BY Price DESC LIMIT 1</code> also works.'},
+  {id:'cancelled-customers', pts:30, title:'Customers with a cancelled order',
+   task:'Show the <code>CustomerName</code> of every customer who has at least one <strong>Cancelled</strong> order.',
+   hints:['First find the <code>CustomerID</code>s of the cancelled orders.',"<code>WHERE CustomerID IN (SELECT CustomerID FROM Orders WHERE Status = 'Cancelled')</code>"],
+   solution:"SELECT CustomerName FROM Customers\nWHERE CustomerID IN (SELECT CustomerID FROM Orders WHERE Status = 'Cancelled');",
+   explain:'The subquery lists the customers with a cancelled order, and <code>IN</code> picks their names. A join would work too.'},
+  {id:'managers', pts:30, title:'Who manages someone',
+   task:'Show the <code>FirstName</code> of every employee who manages someone.',
+   hints:["An employee is a manager if their <code>EmployeeID</code> appears in someone's <code>ManagerID</code>.",'<code>WHERE EmployeeID IN (SELECT ManagerID FROM Employees)</code>'],
+   solution:'SELECT FirstName FROM Employees\nWHERE EmployeeID IN (SELECT ManagerID FROM Employees);',
+   explain:'The subquery lists every manager ID. Employees whose ID is on that list manage at least one person.'},
+
+  // Changing data
+  {id:'new-product', pts:20, title:'Add a product', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Add a new product: ID 13, name <strong>Laptop Stand</strong>, category <strong>Office</strong>, price 27.5, stock 40.',
+   hints:['<code>INSERT INTO Products (ProductID, ProductName, Category, Price, Stock) VALUES (...)</code>','Text goes in single quotes; the numbers do not.'],
+   solution:"INSERT INTO Products (ProductID, ProductName, Category, Price, Stock)\nVALUES (13, 'Laptop Stand', 'Office', 27.5, 40);",
+   explain:'The values are listed in the same order as the columns.'},
+  {id:'ship-pending', pts:20, title:'Update many rows', check:'SELECT * FROM Orders', checkTable:'Orders',
+   task:'Every <strong>Pending</strong> order has now shipped. Change their <code>Status</code> to <strong>Shipped</strong>.',
+   hints:['<code>UPDATE Orders SET Status = ...</code>',"Only change the rows with <code>WHERE Status = 'Pending'</code>."],
+   solution:"UPDATE Orders\nSET Status = 'Shipped'\nWHERE Status = 'Pending';",
+   explain:'<code>WHERE</code> picks the pending orders, and <code>SET</code> gives them the new status.'},
+  {id:'discount-home', pts:20, title:'A discount', check:'SELECT * FROM Products', checkTable:'Products',
+   task:'Give every <strong>Home</strong> product a 10% discount: multiply its <code>Price</code> by 0.9.',
+   hints:['<code>SET Price = Price * 0.9</code>',"Limit it with <code>WHERE Category = 'Home'</code>."],
+   solution:"UPDATE Products\nSET Price = Price * 0.9\nWHERE Category = 'Home';",
+   explain:"Each row's new price is worked out from its old price."},
+  {id:'remove-lines', pts:20, title:'Delete order lines', check:'SELECT * FROM OrderItems', checkTable:'OrderItems',
+   task:'Remove every order line in <code>OrderItems</code> that belongs to order 101.',
+   hints:['<code>DELETE FROM OrderItems WHERE ...</code>','<code>WHERE OrderID = 101</code>'],
+   solution:'DELETE FROM OrderItems\nWHERE OrderID = 101;',
+   explain:'Both lines of order 101 match the condition, so both are removed.'},
+
+  // Tables
+  {id:'create-suppliers', pts:20, title:'Build a table', check:'SELECT * FROM Suppliers', checkTable:'Suppliers',
+   task:'Create a table called <code>Suppliers</code> with the columns <code>SupplierID</code> (INT) and <code>SupplierName</code> (VARCHAR(255)). Then add the supplier 1, <strong>Nordic Paper</strong>.',
+   hints:['Write two statements, each ending with a semicolon: first <code>CREATE TABLE</code>, then <code>INSERT INTO</code>.','<code>CREATE TABLE Suppliers (SupplierID INT, SupplierName VARCHAR(255));</code>'],
+   solution:"CREATE TABLE Suppliers (\n  SupplierID INT,\n  SupplierName VARCHAR(255)\n);\nINSERT INTO Suppliers (SupplierID, SupplierName)\nVALUES (1, 'Nordic Paper');",
+   explain:'A new table starts empty. <code>INSERT INTO</code> then adds its first row.'}
+);
+
+/* ---------------- themes ---------------- */
+// Each theme runs from fill-in-the-blank exercises to write-it-yourself challenges.
+const THEMES = [
+  {id:'t-basics', name:'SELECT basics', about:'Pick columns, remove repeats, rename and calculate',
+   items:['x-select','x-star','x-columns','x-distinct','x-distinct2','x-alias','x-calc',
+          'select-all','pick-columns','employee-names','distinct','order-statuses','with-tax']},
+  {id:'t-filter', name:'Filtering', about:'Keep the rows you want with WHERE, AND, OR and NOT',
+   items:['x-where','x-not','x-notequal','x-greater','x-and','x-or',
+          'where','low-stock','not-germany','shipped-2-or-5']},
+  {id:'t-more', name:'More filtering', about:'Lists, ranges, patterns and missing values',
+   items:['x-in','x-between','x-between-dates','x-like','x-like-start','x-null','x-notnull',
+          'in','between','like','null','march-orders','uk-or-ireland']},
+  {id:'t-sort', name:'Sorting', about:'ORDER BY, LIMIT and OFFSET',
+   items:['x-order','x-asc','x-desc','x-two-sort','x-limit','x-offset',
+          'order-by','sort-country-name','limit','recent-orders','second-cheapest']},
+  {id:'t-func', name:'Functions', about:'COUNT, SUM, AVG, MIN, MAX and more',
+   items:['x-count','x-countcol','x-sum','x-min','x-max','x-avg','x-round','x-upper',
+          'count','shipped-count','electronics-stock','price-range','avg-books']},
+  {id:'t-group', name:'Grouping', about:'One row per group with GROUP BY and HAVING',
+   items:['x-group','x-group-sum','x-group-status','x-having','x-having-sum',
+          'group-count','category-max','having','one-order-customers','category-stock-avg']},
+  {id:'t-joins', name:'Joins', about:'Combine rows from two or more tables',
+   items:['x-join','x-join-items','x-leftjoin','x-self',
+          'inner-join','order-101','pending-customers','never-ordered','self-join','order-totals','repeat-customers','orders-per-customer','top-spender']},
+  {id:'t-sub', name:'Subqueries', about:'A query inside another query',
+   items:['x-sub-in','x-sub-avg','x-sub-notin',
+          'above-avg','priciest','unsold','cancelled-customers','managers']},
+  {id:'t-change', name:'Changing data', about:'INSERT, UPDATE and DELETE',
+   items:['x-insert','x-update','x-update-math','x-update-two','x-delete','x-delete-where',
+          'insert','new-product','update','ship-pending','discount-home','delete','remove-lines']},
+  {id:'t-tables', name:'Tables', about:'CREATE, ALTER and DROP',
+   items:['x-create','x-primary','x-decimal','x-alter','x-drop-col','x-drop',
+          'create-suppliers']}
+];
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stripTags = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+
+const IDENT = {};
+TABLES.forEach(t => { IDENT[t.name.toLowerCase()] = t.name; t.cols.forEach(c => IDENT[c[0].toLowerCase()] = c[0]); });
+// The table a challenge asks you to create, so "create table suppliers" works in any letter case too.
+['Suppliers', 'SupplierID', 'SupplierName'].forEach(w => { IDENT[w.toLowerCase()] = w; });
+// AlaSQL reserves a few words that real databases happily accept as column names, so
+// "SUM(Price) AS Total" or "COUNT(*) AS Count" would be a syntax error. Those names get quoted.
+const SOFT_KW = new Set('TOTAL COUNT SUM AVG VALUE FIRST LAST INDEX PERCENT'.split(' '));
+
+function splitSQL(src){
+  const out = []; let cur = ''; let i = 0; const n = src.length;
+  while (i < n){
+    const ch = src[i], nx = src[i+1];
+    if (ch === '-' && nx === '-'){ while (i < n && src[i] !== '\n') i++; continue; }
+    if (ch === '/' && nx === '*'){ const j = src.indexOf('*/', i+2); i = j < 0 ? n : j+2; cur += ' '; continue; }
+    if (ch === "'" || ch === '"' || ch === '`'){
+      let j = i+1;
+      while (j < n){ if (src[j] === ch){ if (src[j+1] === ch){ j += 2; continue; } break; } j++; }
+      cur += src.slice(i, j+1); i = j+1; continue;
+    }
+    if (ch === ';'){ if (cur.trim()) out.push(cur.trim()); cur = ''; i++; continue; }
+    cur += ch; i++;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+function canon(stmt){
+  const soft = new Set();
+  stmt.replace(/('(?:[^']|'')*'|"(?:[^"]|"")*"|`[^`]*`)|\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\b/gi,
+    (m, q, a) => { if (a && SOFT_KW.has(a.toUpperCase())) soft.add(a.toUpperCase()); return m; });
+  return stmt.replace(/('(?:[^']|'')*'|"(?:[^"]|"")*"|`[^`]*`)|\b([A-Za-z_][A-Za-z0-9_]*)\b/g, (m, q, w, at, s) => {
+    if (q) return q;
+    // An alias like Total is quoted wherever it appears, but COUNT(...) stays a function call.
+    if (soft.has(w.toUpperCase()) && s[at - 1] !== '.' && !/^\s*\(/.test(s.slice(at + m.length))) return '`' + w + '`';
+    return IDENT[w.toLowerCase()] || w;
+  });
+}
+
+const KW = new Set('SELECT FROM WHERE AND OR NOT IN IS NULL LIKE BETWEEN ORDER BY GROUP HAVING LIMIT OFFSET JOIN INNER LEFT RIGHT FULL OUTER CROSS ON AS DISTINCT INSERT INTO VALUES UPDATE SET DELETE CREATE TABLE DROP ALTER ADD COLUMN UNION ALL EXISTS CASE WHEN THEN ELSE END ASC DESC TOP TRUE FALSE PRIMARY KEY'.split(' '));
+const FN = new Set('COUNT SUM AVG MIN MAX UPPER LOWER LENGTH LEN ROUND COALESCE IFNULL SUBSTRING ABS'.split(' '));
+function highlight(src){
+  return src.replace(/(--[^\n]*)|('(?:[^']|'')*'?)|("(?:[^"]|"")*"?)|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_][A-Za-z0-9_]*)\b|([&<>])/g,
+    (m, c, s1, s2, n, w, x) => {
+      if (c) return '<span class="t-c">' + esc(c) + '</span>';
+      if (s1 || s2) return '<span class="t-s">' + esc(s1 || s2) + '</span>';
+      if (n) return '<span class="t-n">' + n + '</span>';
+      if (w){ const U = w.toUpperCase(); if (KW.has(U)) return '<span class="t-k">' + w + '</span>'; if (FN.has(U)) return '<span class="t-f">' + w + '</span>'; return w; }
+      return esc(x);
+    });
+}
+const hlGaps = src => highlight(src).replace(/___/g, '<span class="gap">___</span>');
+
+/* ---------------- build items ---------------- */
+// Challenges: a hint ladder that gets closer to the answer with every press.
+function skeleton(sql){
+  const toks = []; const re = /('(?:[^']|'')*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)|(\s+)|([\s\S])/g;
+  let m;
+  while ((m = re.exec(sql))){
+    if (m[1] || m[2]) toks.push({ s:m[0], blank:true });
+    else if (m[3]){ const U = m[3].toUpperCase(); toks.push({ s:m[0], blank: !(KW.has(U) || FN.has(U)) }); }
+    else toks.push({ s:m[0], blank:false });
+  }
+  return toks;
+}
+function buildLadder(c){
+  const toks = skeleton(c.solution);
+  const n = toks.filter(t => t.blank).length;
+  const steps = [
+    { text: c.hints[0] },
+    { text: c.hints[1] },
+    { text: 'Here is the shape of the answer. The keywords are in place; fill in the names and values:', code: toks.map(t => t.blank ? '___' : t.s).join('') }
+  ];
+  if (n > 1){
+    const leave = Math.ceil(n / 3); let seen = 0;
+    const code = toks.map(t => { if (!t.blank) return t.s; seen++; return seen > n - leave ? '___' : t.s; }).join('');
+    steps.push({ text: 'Almost there. Only ' + (leave === 1 ? 'the last blank is' : 'the last ' + leave + ' blanks are') + ' left:', code });
+  }
+  return steps;
+}
+CH.forEach(c => { c.kind = 'ch'; c.ladder = buildLadder(c); });
+
+// Exercises: parse [[answer|alternative]] blanks out of the template.
+function parseTemplate(code){
+  const parts = []; const re = /\[\[(.+?)\]\]/g; let last = 0, m;
+  while ((m = re.exec(code))){
+    parts.push({ t: code.slice(last, m.index) });
+    const alts = m[1].split('|');
+    parts.push({ b: alts[0], alts });
+    last = re.lastIndex;
+  }
+  parts.push({ t: code.slice(last) });
+  return parts;
+}
+EX.forEach(e => {
+  e.kind = 'ex';
+  e.parts = parseTemplate(e.code);
+  e.blanks = e.parts.filter(p => p.b !== undefined);
+  e.full = e.parts.map(p => p.b !== undefined ? p.b : p.t).join('');
+});
+
+EX.forEach(e => { if (e.pts == null) e.pts = 5; });
+const BY = Object.fromEntries([...EX, ...CH].map(i => [i.id, i]));
+// Question order is theme by theme; each question knows its theme.
+const THEME_BY = {};
+THEMES.forEach(t => { THEME_BY[t.id] = t; t.items = t.items.map(id => { const it = BY[id]; it.theme = t.id; return it; }); });
+const ALL = THEMES.flatMap(t => t.items);
+const themeOf = it => THEME_BY[it.theme];
+function helpMax(it){ return it.kind === 'ch' ? it.ladder.length : it.blanks.length + 1; }
+
+// Word bank: the answers plus a few look-alike decoys, in a stable shuffled order.
+const KWPOOL = ['SELECT','FROM','WHERE','AND','OR','NOT','IN','IS','NULL','LIKE','BETWEEN','ORDER','BY','GROUP','HAVING','DESC','ASC','LIMIT','DISTINCT','AS','JOIN','ON','LEFT','INSERT','INTO','VALUES','UPDATE','SET','DELETE','CREATE','TABLE','DROP','ALTER','ADD','COUNT','SUM','MIN','MAX','AVG'];
+const COLPOOL = [...new Set(TABLES.flatMap(t => t.cols.map(c => c[0])))];
+const SYMPOOL = ['%','_','<','>','=','*'];
+const LITPOOL = ['Paris','Munich','Madrid','London','Rome','Dublin'];
+function seeded(str){
+  let h = 2166136261;
+  for (const ch of str){ h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  h = (h >>> 0) || 1;
+  return () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+}
+function category(w){
+  if (KWPOOL.includes(w.toUpperCase())) return 'kw';
+  if (IDENT[w.toLowerCase()]) return 'col';
+  if (/^[^A-Za-z0-9]+$/.test(w)) return 'sym';
+  return 'lit';
+}
+function bankFor(ex){
+  if (ex._bank) return ex._bank;
+  const rnd = seeded(ex.id);
+  const answers = ex.blanks.map(b => b.b);
+  const taken = new Set(answers.map(a => a.toUpperCase()));
+  const cats = [...new Set(answers.map(category))];
+  const pools = { kw:KWPOOL, col:COLPOOL, sym:SYMPOOL, lit:LITPOOL };
+  const extra = (ex.decoys || []).filter(w => !taken.has(w.toUpperCase())); let guard = 0;
+  extra.forEach(w => taken.add(w.toUpperCase()));
+  while (extra.length < 3 && guard++ < 300){
+    const pool = pools[cats[extra.length % cats.length]];
+    const w = pool[Math.floor(rnd() * pool.length)];
+    if (!taken.has(w.toUpperCase())){ taken.add(w.toUpperCase()); extra.push(w); }
+  }
+  const all = [...answers, ...extra];
+  for (let i = all.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  return ex._bank = all;
+}
+
+/* ---------------- engine ---------------- */
+let engineReady = false;
+let dbn = 0;
+function freshDB(){
+  const id = 'practice' + (++dbn);
+  const db = new alasql.Database(id);
+  for (const t of TABLES){
+    db.exec('CREATE TABLE ' + t.name + ' (' + t.cols.map(c => c[0] + ' ' + c[1]).join(', ') + ')');
+    db.tables[t.name].data = t.rows.map(r => { const o = {}; t.cols.forEach((c, i) => { o[c[0]] = r[i]; }); return o; });
+  }
+  return db;
+}
+function dropDB(db){ try { delete alasql.databases[db.databaseid]; } catch(e){} }
+
+function cleanError(e){
+  let m = (e && e.message) ? e.message : String(e);
+  const t = m.match(/Table does not exist:\s*([\w.]+)/i);
+  if (t) return 'There is no table called "' + t[1] + '". The tables are: ' + TABLES.map(x => x.name).join(', ') + '.';
+  if (/^Parse error/i.test(m)){
+    const lines = m.split('\n');
+    return 'The SQL has a syntax error near the ^ mark:\n' + (lines[1] || '') + '\n' + (lines[2] || '');
+  }
+  const f = m.match(/alasql\.fn\.(\w+) is not a function/i);
+  if (f) return 'There is no function called ' + f[1] + '. Check the spelling.';
+  if (/Cannot read prop|undefined is not an object|is not defined/i.test(m)){
+    return 'Something in the query points to a table, alias or column that does not exist. Check your spelling and aliases.\n(' + m + ')';
+  }
+  return m;
+}
+
+const expCache = {};
+function expected(ch){
+  if (expCache[ch.id]) return expCache[ch.id];
+  const db = freshDB();
+  try {
+    let last;
+    for (const s of splitSQL(ch.solution)) last = db.exec(canon(s));
+    expCache[ch.id] = ch.check ? db.exec(ch.check) : last;
+  } finally { dropDB(db); }
+  return expCache[ch.id];
+}
+function describe(res){
+  if (typeof res === 'number') return res + (res === 1 ? ' row affected.' : ' rows affected.');
+  if (Array.isArray(res)) return res.length + ' rows returned.';
+  return 'Statement ran.';
+}
+function toMatrix(rows){
+  const cols = []; const seen = new Set();
+  for (const r of rows) for (const k of Object.keys(r)) if (!seen.has(k)){ seen.add(k); cols.push(k); }
+  const norm = v => {
+    if (v === null || v === undefined) return '\u2205';
+    if (typeof v === 'number') return String(Math.round(v * 100) / 100);
+    if (v instanceof Date) return v.toISOString();
+    return String(v);
+  };
+  return { cols, data: rows.map(r => cols.map(c => norm(r[c]))) };
+}
+function sameBag(a, b){ const x = [...a].sort(), y = [...b].sort(); return x.length === y.length && x.every((k, i) => k === y[i]); }
+function compare(userRows, expRows, ordered, isChange){
+  const u = toMatrix(userRows), e = toMatrix(expRows);
+  if (u.data.length !== e.data.length){
+    return { ok:false, msg: isChange
+      ? 'After your statement the table has ' + u.data.length + ' rows. It should have ' + e.data.length + '.'
+      : 'Your query returned ' + u.data.length + (u.data.length === 1 ? ' row' : ' rows') + '. The answer has ' + e.data.length + '.' };
+  }
+  if (u.cols.length !== e.cols.length){
+    // Two result columns with the same name (e.FirstName, m.FirstName) come back as one.
+    const merged = u.cols.length < e.cols.length ? ' If two of your columns have the same name, give one of them a new name with AS.' : '';
+    return { ok:false, msg:'You have the right number of rows, but ' + u.cols.length + (u.cols.length === 1 ? ' column' : ' columns') + '. The answer has ' + e.cols.length + '.' + merged };
+  }
+  const key = r => JSON.stringify(r);
+  const keyS = r => JSON.stringify([...r].sort());
+  const ue = u.data.map(key), ee = e.data.map(key), us = u.data.map(keyS), es = e.data.map(keyS);
+  if (ordered){
+    if (ue.every((k, i) => k === ee[i]) || us.every((k, i) => k === es[i])) return { ok:true };
+    if (sameBag(ue, ee) || sameBag(us, es)) return { ok:false, msg:'Those are the right rows, but not in the right order. Check your ORDER BY.' };
+  } else if (sameBag(ue, ee) || sameBag(us, es)) return { ok:true };
+  return { ok:false, msg: isChange
+    ? 'The table doesn\'t look right yet. Check which rows your statement changed and the values you used.'
+    : 'Right number of rows and columns, but some values don\'t match. Check your conditions.' };
+}
+
+function evaluate(ch, sql){
+  const out = {};
+  const stmts = splitSQL(sql);
+  if (!stmts.length){
+    out.verdict = { ok:false, msg:'Write a SQL statement in the editor first.' };
+    out.outcome = 'The editor is empty.';
+    return out;
+  }
+  const db = freshDB();
+  let checkRows = null;
+  try {
+    const results = [];
+    for (const s of stmts) results.push(db.exec(canon(s)));
+    const last = results[results.length - 1];
+    const lastSel = [...results].reverse().find(r => Array.isArray(r));
+    if (ch.check){
+      checkRows = db.exec(ch.check);
+      if (Array.isArray(last)){ out.rows = last; }
+      else { out.message = describe(last); out.rows = checkRows; out.label = ch.checkTable + ' after your change:'; }
+    } else if (lastSel){ out.rows = lastSel; if (!Array.isArray(last)) out.message = describe(last); }
+    else { out.message = describe(last); }
+  } catch(e){ out.error = cleanError(e); }
+  finally { dropDB(db); }
+
+  if (out.error){ out.outcome = 'Running it gives this error: ' + out.error; return out; }
+  let exp;
+  try { exp = expected(ch); } catch(e){
+    out.verdict = { ok:false, msg:'The checker could not work out the expected answer for this challenge.' };
+    out.outcome = out.verdict.msg; return out;
+  }
+  if (ch.check){ out.verdict = compare(checkRows, exp, false, true); }
+  else if (!out.rows){ out.verdict = { ok:false, msg:'This challenge needs a SELECT query that returns rows.' }; }
+  else { out.verdict = compare(out.rows, exp, !!ch.ordered, false); }
+  out.outcome = out.verdict.ok ? 'It already returns the correct result.' : out.verdict.msg;
+  return out;
+}
+
+/* ---------------- app ---------------- */
+const PERSON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.6 21.2c.8-4.5 4.2-7 8.4-7s7.6 2.5 8.4 7z"/></svg>';
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+// Safe lookup: one challenge's id is literally "null", so BY[null] would find it.
+const byId = id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(BY, id) ? BY[id] : null;
+
+/* ---------------- saved progress ---------------- */
+// Same storage key as before, so progress from the earlier version carries over.
+const LS_KEY = 'sql-practice-v1';
+let state = { solved:{}, help:{}, revealed:{}, drafts:{}, current:null, name:'', stats:null };
+try {
+  const saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+  if (saved && typeof saved === 'object') state = Object.assign(state, saved);
+} catch(e){}
+for (const k of ['solved', 'help', 'revealed', 'drafts']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
+for (const k in state.help) if (state.help[k] === true) state.help[k] = 1;
+delete state.last; delete state.seenEx;
+for (const id in state.drafts) if (state.solved[id]) delete state.drafts[id];   // left over from before 1.3.1
+if (typeof state.name !== 'string') state.name = '';
+state.stats = Object.assign({ attempts:0, correct:0, streak:0, best:0, days:[] }, state.stats || {});
+if (!Array.isArray(state.stats.days)) state.stats.days = [];
+function save(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+
+/* ---------------- points and stats ---------------- */
+function totalPoints(){ let p = 0; for (const id in state.solved) if (byId(id)) p += state.solved[id].pts || 0; return p; }
+function worthAt(it, k){ return Math.round(it.pts * FACTORS[Math.min(3, k)]); }
+function worthNow(it){ return state.revealed[it.id] ? 0 : worthAt(it, state.help[it.id] || 0); }
+function award(it){
+  if (state.solved[it.id]) return 'already';
+  const k = state.help[it.id] || 0;
+  const how = state.revealed[it.id] ? 'solution' : k > 0 ? 'help' : 'clean';
+  const pts = worthNow(it);
+  state.solved[it.id] = { pts, how };
+  return pts;
+}
+function levelInfo(pts){
+  let li = 0; LEVELS.forEach((l, i) => { if (pts >= l[0]) li = i; });
+  const next = LEVELS[li + 1];
+  return { name:LEVELS[li][1], next, pct: next ? (pts - LEVELS[li][0]) / (next[0] - LEVELS[li][0]) : 1 };
+}
+function dayKey(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dayStreak(){
+  const have = new Set(state.stats.days), d = new Date();
+  if (!have.has(dayKey(d))) d.setDate(d.getDate() - 1);   // today not played yet: the streak is still alive
+  let n = 0;
+  while (have.has(dayKey(d))){ n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+// One count per question visit. Answers that were shown don't count toward accuracy.
+function record(ok, it){
+  // visit.shown covers "Show answer" on a question you had already solved, which never sets
+  // state.revealed; without it, Show answer + Submit counted as correct and grew the streak.
+  if (visit.counted || visit.shown || state.revealed[it.id]) return;
+  const s = state.stats;
+  s.attempts++;
+  if (ok){ s.correct++; s.streak++; if (s.streak > s.best) s.best = s.streak; visit.counted = true; }
+  else s.streak = 0;
+  const today = dayKey(new Date());
+  if (!s.days.includes(today)){ s.days.push(today); if (s.days.length > 400) s.days.splice(0, s.days.length - 400); }
+}
+
+/* ---------------- key words in each question ---------------- */
+// Shown in orange. Listed in priority order; at most 4 highlighted words per sentence.
+const MAX_KEY_WORDS = 4;
+const KEYS = {
+  'x-select':['all columns','Customers'], 'x-columns':['only','name','city'], 'x-distinct':['country','without repeats'],
+  'x-where':['lives in','Berlin'], 'x-not':['does not','Germany'], 'x-and':['Electronics','less than 30'],
+  'x-or':['Madrid','or','Lisbon'], 'x-order':['Sort','by name'], 'x-desc':['most expensive','cheapest'],
+  'x-limit':['5 cheapest'], 'x-between':['from 10 to 20'], 'x-in':['Spain','Italy','Portugal'],
+  'x-like':['ends with','Desk'], 'x-null':['no email address'], 'x-notnull':['do have','email address'],
+  'x-min':['lowest','price'], 'x-count':['Count','Books'], 'x-sum':['Add up','stock'],
+  'x-alias':['customer names','called Buyer'], 'x-group':['Count','each country'], 'x-having':['countries','more than one'],
+  'x-join':['order ID','name','customer'], 'x-leftjoin':['every customer','never ordered'], 'x-insert':['Add','new customer'],
+  'x-update':['Set','stock','product 11'], 'x-delete':['Delete','cancelled'], 'x-create':['Create','table','Suppliers'],
+  'x-alter':['Add','Phone column','Customers'], 'x-drop':['Delete','Suppliers table','completely'],
+  'select-all':['every column','Customers'], 'pick-columns':['only','ProductName','Price'],
+  'where':['customer','Germany','all columns'], 'order-by':['less than 20','cheapest'],
+  'distinct':['country','Customers','no duplicates'], 'count':['How many','Products','single number'],
+  'like':['starts with','S','all columns'], 'in':['Electronics','or','Books','all columns'],
+  'between':['from 10 to 50'], 'null':['no email address','CustomerName'], 'limit':['3','most expensive first'],
+  'group-count':['each country','how many'], 'having':['Category','average','above 30'],
+  'inner-join':['OrderID','OrderDate','CustomerName'], 'insert':['new customer','Add','Customers'],
+  'update':['Wireless Mouse','Price','22.99','No other product'], 'delete':['Delete','Status','Cancelled'],
+  'never-ordered':['CustomerName','never placed'], 'unsold':['ProductName','never been ordered','OrderItems'],
+  'above-avg':['more than','average price'], 'order-totals':['total value','Quantity','Price'],
+  'repeat-customers':['CustomerName','more than one'],
+  'self-join':["employee's","manager's",'no manager','Employee','Manager'],
+  'top-spender':['spent the most','CustomerName','one row'],
+  'x-star':['every column','Orders'], 'x-distinct2':['category','once'], 'x-calc':['price times stock','name'],
+  'employee-names':['FirstName','LastName','employee'], 'order-statuses':['Status','no duplicates'], 'with-tax':['Price','times 1.2','WithTax'],
+  'x-notequal':['not','Shipped'], 'x-greater':['more than 100','stock'], 'low-stock':['fewer than 50','Stock'],
+  'not-germany':['does not','Germany','UK'], 'shipped-2-or-5':['2','or','5','Shipped','all columns'],
+  'x-like-start':['starts with','M'], 'x-between-dates':['orders','February 2026'], 'march-orders':['March 2026','all columns'],
+  'uk-or-ireland':['UK','Ireland','no email'], 'x-asc':['stock','smallest first','direction'], 'x-two-sort':['by country','by name'],
+  'x-offset':['Skip','next 3'], 'sort-country-name':['by country','by name'], 'recent-orders':['3 most recent','newest'],
+  'second-cheapest':['second cheapest'], 'x-max':['highest','price'], 'x-avg':['average','price'],
+  'x-countcol':['Count','email address'], 'x-round':['rounded','2 decimal places'], 'x-upper':['capital letters'],
+  'shipped-count':['How many','Shipped','single number'], 'electronics-stock':['total','Stock','Electronics','single number'],
+  'price-range':['lowest','highest','one row'], 'avg-books':['average','Price','Books'],
+  'x-group-sum':['Add up','each category'], 'x-group-status':['Count','each status'], 'x-having-sum':['total stock','over 200'],
+  'category-max':['Category','highest','Price'], 'one-order-customers':['CustomerID','exactly one order'], 'category-stock-avg':['more than two','average'],
+  'x-join-items':['order line','name','product'], 'x-self':['employee','manager'], 'order-101':['ProductName','Quantity','order 101'],
+  'pending-customers':['CustomerName','Pending'], 'orders-per-customer':['no orders','show 0'],
+  'x-sub-in':['at least one order'], 'x-sub-avg':['cheaper than','average price'], 'x-sub-notin':['nobody','ordered'],
+  'priciest':['highest price','ProductName','Price'], 'cancelled-customers':['at least one','Cancelled'], 'managers':['FirstName','manages someone'],
+  'x-update-math':['Raise','Books','by 2'], 'x-update-two':['both','price','stock'], 'x-delete-where':['Delete','Office'],
+  'new-product':['Add','new product'], 'ship-pending':['Pending','Change','Status','Shipped'], 'discount-home':['Home','10% discount','Price'],
+  'remove-lines':['Remove','OrderItems','order 101'], 'x-primary':['SupplierID','primary key'], 'x-decimal':['Price','decimals'],
+  'x-drop-col':['Remove','Email column'], 'create-suppliers':['Create','Suppliers','SupplierID','SupplierName','add','Nordic Paper']
+};
+const WORDCH = /[A-Za-z0-9_]/;
+// Wraps each key phrase (whole words, exact case, first free match) in <mark class="key">.
+// Returns what it did so the rule can be checked: [{key, sentence, words}] and any skipped keys.
+function highlightKeys(root, keys){
+  const nodes = []; let text = '';
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n; (n = walk.nextNode()); ){ nodes.push({ n, start:text.length }); text += n.data; }
+  const sentenceAt = []; let s = 0;
+  for (let i = 0; i < text.length; i++){
+    sentenceAt[i] = s;
+    if ('.?!'.includes(text[i]) && (i + 1 === text.length || /\s/.test(text[i + 1]))) s++;
+  }
+  const used = {}, picks = [], skipped = [];
+  for (const k of keys){
+    const words = k.trim().split(/\s+/).length;
+    let at = -1, from = 0;
+    for (;;){
+      at = text.indexOf(k, from);
+      if (at < 0) break;
+      const end = at + k.length;
+      const edges = (at === 0 || !WORDCH.test(text[at - 1])) && (end === text.length || !WORDCH.test(text[end]));
+      if (edges && !picks.some(p => at < p.end && end > p.start)) break;
+      from = at + 1;
+    }
+    const node = at < 0 ? null : nodes.find(x => at >= x.start && at + k.length <= x.start + x.n.data.length);
+    const si = at < 0 ? -1 : sentenceAt[at];
+    if (!node || (used[si] || 0) + words > MAX_KEY_WORDS){ skipped.push(k); continue; }
+    used[si] = (used[si] || 0) + words;
+    picks.push({ key:k, start:at, end:at + k.length, node, sentence:si, words });
+  }
+  picks.slice().sort((x, y) => y.start - x.start).forEach(p => {
+    const r = document.createRange();
+    r.setStart(p.node.n, p.start - p.node.start);
+    r.setEnd(p.node.n, p.end - p.node.start);
+    const m = document.createElement('mark'); m.className = 'key';
+    r.surroundContents(m);
+  });
+  return { picks: picks.map(p => ({ key:p.key, sentence:p.sentence, words:p.words })), skipped };
+}
+
+/* ---------------- current question ---------------- */
+// Pick up where you left off, unless that question is already solved (say the app was closed on
+// the green screen): then go where Next would have gone. Only when everything is solved does a
+// solved question open.
+function startId(){
+  const last = byId(state.current);
+  if (!last) return (ALL.find(isOpen) || ALL[0]).id;
+  if (isOpen(last)) return last.id;
+  return nextStep(last, false).id || last.id;
+}
+let curId = startId();
+let shownId = null;
+let visit = { counted:false, missed:false, shown:false, run:null };
+const item = () => BY[curId];
+const qBox = $('#q');
+
+/* ---------------- challenge editor ---------------- */
+const editor = $('#sql'), hl = $('#hl'), hlPre = hl.parentElement;
+function updateHL(){ hl.innerHTML = highlight(editor.value) + '\n'; syncScroll(); }
+function syncScroll(){ hlPre.scrollTop = editor.scrollTop; hlPre.scrollLeft = editor.scrollLeft; }
+let draftTimer = null;
+editor.addEventListener('input', () => { updateHL(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 400); });
+editor.addEventListener('scroll', syncScroll);
+editor.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); submit(); } });
+function saveDraft(){
+  clearTimeout(draftTimer);
+  const it = byId(shownId); if (!it) return;
+  // A solved question keeps no draft, so opening it again later starts it fresh instead of
+  // showing the old answer already filled in.
+  if (state.solved[it.id]){ if (Object.prototype.hasOwnProperty.call(state.drafts, it.id)){ delete state.drafts[it.id]; save(); } return; }
+  if (it.kind === 'ch') state.drafts[it.id] = editor.value;
+  else state.drafts[it.id] = { vals:ex.vals.slice(), given:ex.given.slice() };
+  save();
+}
+
+/* ---------------- exercise blanks: tap a word, it drops into the outlined blank ---------------- */
+const ex = { vals:[], given:[], active:null, last:null, marks:null };
+function exDraft(it){
+  const d = state.drafts[it.id];
+  if (d && typeof d === 'object' && Array.isArray(d.vals)) return { vals:d.vals, given:Array.isArray(d.given) ? d.given : [] };
+  return { vals:[], given:[] };
+}
+const normAns = s => String(s).trim().replace(/\s+/g, ' ').replace(/^['"]+|['"]+$/g, '').toUpperCase();
+const blankRight = (it, i, v) => it.blanks[i].alts.some(a => normAns(a) === normAns(v));
+const isGiven = i => ex.given.includes(i);
+function firstEmpty(){ const i = ex.vals.findIndex((v, j) => !v && !isGiven(j)); return i < 0 ? null : i; }
+
+function renderExercise(it){
+  const d = exDraft(it), n = it.blanks.length;
+  ex.given = d.given.filter(i => Number.isInteger(i) && i >= 0 && i < n);
+  ex.vals = it.blanks.map((b, i) => isGiven(i) ? b.b : String(d.vals[i] || ''));
+  ex.marks = null;
+  ex.active = firstEmpty();
+  ex.last = null;
+  ex.vals.forEach((v, i) => { if (v && !isGiven(i)) ex.last = i; });
+  let bi = 0;
+  $('#code').innerHTML = it.parts.map(p => p.t !== undefined ? highlight(p.t) : '<button type="button" class="blank" data-i="' + (bi++) + '"></button>').join('');
+  $('#bank').innerHTML = bankFor(it).map(w => '<button type="button" class="chip" data-w="' + esc(w) + '">' + esc(w) + '</button>').join('');
+  paintBlanks();
+}
+function paintBlanks(){
+  const it = item(), letters = (state.help[it.id] || 0) >= 2, n = it.blanks.length;
+  document.querySelectorAll('#code .blank').forEach(b => {
+    const i = +b.dataset.i, v = ex.vals[i], given = isGiven(i);
+    let cls = 'blank';
+    if (given) cls += ' given';
+    else if (v) cls += ex.marks ? ' ' + ex.marks[i] : ' filled';
+    if (!given && i === ex.active) cls += ' target';
+    b.className = cls;
+    b.disabled = given;
+    if (v) b.textContent = v;
+    else if (letters){ const a = it.blanks[i].b; b.innerHTML = '<span class="ph">' + esc(a[0]) + '_'.repeat(Math.max(0, a.length - 1)) + '</span>'; }
+    else b.innerHTML = '&#8203;';
+    b.setAttribute('aria-label', 'Blank ' + (i + 1) + ' of ' + n + (v ? ': ' + v : ', empty') + (given ? ', filled in for you' : ''));
+  });
+  const counts = {};
+  ex.vals.forEach(v => { if (v){ const k = v.toUpperCase(); counts[k] = (counts[k] || 0) + 1; } });
+  document.querySelectorAll('#bank .chip').forEach(c => {
+    const k = c.dataset.w.toUpperCase(), used = counts[k] > 0;
+    if (used) counts[k]--;
+    c.classList.toggle('used', used);
+    c.setAttribute('aria-pressed', String(used));
+  });
+}
+// Changing a word clears the red marks, so the old message about them goes too.
+function changed(){ ex.marks = null; paintBlanks(); saveDraft(); if (fbMsg) setFb(null); else fitSoon(); }
+
+function chipTap(c){
+  const w = c.dataset.w, K = w.toUpperCase();
+  if (c.classList.contains('used')){
+    // Tapping a word that's already placed takes it back out.
+    for (let i = ex.vals.length - 1; i >= 0; i--){
+      if (!isGiven(i) && ex.vals[i] && ex.vals[i].toUpperCase() === K){ ex.vals[i] = ''; ex.active = i; if (ex.last === i) ex.last = null; return changed(); }
+    }
+    return;
+  }
+  let t = ex.active;
+  if (t == null || isGiven(t)) t = firstEmpty();
+  if (t == null) t = ex.last;          // every blank is full: swap out the word placed last
+  if (t == null) return;
+  ex.vals[t] = w; ex.last = t;
+  const nxt = ex.vals.findIndex((v, j) => j > t && !v && !isGiven(j));
+  ex.active = nxt >= 0 ? nxt : firstEmpty();
+  changed();
+}
+function blankTap(b){
+  const i = +b.dataset.i;
+  if (ex.vals[i]){ ex.vals[i] = ''; if (ex.last === i) ex.last = null; }   // tapping a filled blank empties it
+  ex.active = i;
+  changed();
+}
+
+/* ---------------- submit ---------------- */
+function submit(){ item().kind === 'ch' ? submitChallenge() : submitExercise(); }
+
+function submitExercise(){
+  const it = item(), n = it.blanks.length;
+  if (ex.vals.some((v, i) => !v && !isGiven(i))){ setFb(n === 1 ? 'Tap a word to fill in the blank.' : 'Fill in every blank first.', 'info'); return; }
+  ex.marks = ex.vals.map((v, i) => blankRight(it, i, v) ? 'right' : 'wrong');
+  const wrong = ex.marks.filter(m => m === 'wrong').length;
+  paintBlanks();
+  if (!wrong) return success(it);
+  miss(it);
+  setFb(n === 1 ? 'Not quite. Try another word.' : (n - wrong) + ' of ' + n + (n - wrong === 1 ? ' is' : ' are') + ' right. ' + (wrong === 1 ? 'Fix the red one.' : 'Fix the red ones.'), 'bad');
+  shake($('#code'));
+}
+
+let engineFailed = false;
+function submitChallenge(){
+  const it = item();
+  saveDraft();
+  if (!editor.value.trim()){ setFb('Type a query first.', 'info'); return; }
+  if (!engineReady){
+    // Back doesn't close the app on newer Android, so "reopen the app" never helped. Try again now.
+    if (engineFailed){ startEngine(); setFb('The SQL checker couldn\u2019t load. Check your internet connection, then tap Submit again.', 'info'); }
+    else setFb('The SQL checker is still loading. Try again in a moment.', 'info');
+    return;
+  }
+  const r = evaluate(it, editor.value);
+  visit.run = r;
+  if (!r.error && r.verdict && r.verdict.ok) return success(it);
+  miss(it);
+  if (r.error){ const lines = r.error.split('\n'); setFb(lines[0], 'bad', lines.slice(1).join('\n').trim()); }
+  else setFb(r.verdict.msg, 'bad');
+  shake($('.editor'));
+}
+function miss(it){ visit.missed = true; record(false, it); save(); }
+function shake(el){
+  if (!el || reduceMotion()) return;
+  el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+}
+
+/* ---------------- feedback under the question ---------------- */
+// Hint and Show answer stay out of the way until you've missed once (or already used a hint here).
+let fbMsg = null;
+function setFb(text, tone, pre){ fbMsg = text ? { text, tone, pre } : null; renderFb(); }
+function renderFb(){
+  const it = item(), used = (state.help[it.id] || 0) > 0;
+  const acts = visit.missed || used;
+  const m = $('#fbMsg'), p = $('#fbPre');
+  m.hidden = !fbMsg;
+  if (fbMsg){ m.textContent = fbMsg.text; m.className = 'fbmsg ' + fbMsg.tone; }
+  p.hidden = !(fbMsg && fbMsg.pre);
+  p.textContent = fbMsg && fbMsg.pre ? fbMsg.pre : '';
+  $('#acts').hidden = !acts;
+  $('#hintBtn').textContent = used ? 'Hints' : 'Hint';
+  $('#answerBtn').hidden = visit.shown;
+  const r = visit.run;
+  $('#resultBtn').hidden = !(it.kind === 'ch' && r && !r.error && (r.rows || r.message) && fbMsg && fbMsg.tone === 'bad');
+  $('#fb').hidden = !fbMsg && !acts;
+  fitSoon();
+}
+
+/* ---------------- sound for a right answer ---------------- */
+// Decoded once up front and played through Web Audio, so it starts the moment the screen
+// turns green. A plain <audio> element covers the rare case where that isn't ready yet.
+const WIN_SOUND = 'war-thunder-kill.wav';
+let audioCtx = null, winBuffer = null, winLoading = false;
+function getAudioCtx(){
+  if (audioCtx) return audioCtx;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  try { audioCtx = new AC(); } catch(e){ return null; }
+  return audioCtx;
+}
+function loadWinSound(){
+  const ctx = getAudioCtx();
+  if (!ctx || winBuffer || winLoading || !window.fetch) return;
+  winLoading = true;
+  fetch(WIN_SOUND)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+    .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
+    .then(buf => { winBuffer = buf; if (ctx.state === 'running') ctx.suspend().catch(() => {}); })   // idle until needed
+    .catch(() => {})
+    .then(() => { winLoading = false; });
+}
+function playWinSound(){
+  const ctx = getAudioCtx();
+  if (ctx && winBuffer){
+    try {
+      if (ctx.state !== 'running') ctx.resume().catch(() => {});
+      const src = ctx.createBufferSource();
+      src.buffer = winBuffer;
+      src.connect(ctx.destination);
+      src.onended = () => { ctx.suspend().catch(() => {}); };   // let the phone's audio go back to sleep
+      src.start();
+      return;
+    } catch(e){}
+  }
+  try { const a = new Audio(WIN_SOUND); const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch(e){}
+  loadWinSound();
+}
+loadWinSound();
+
+/* ---------------- the green screen ---------------- */
+const themeDone = t => t.items.every(x => state.solved[x.id]);
+let winNext = null;   // where the Next button on the green screen goes
+function success(it){
+  const t = themeOf(it), wasDone = themeDone(t);
+  record(true, it);
+  const gained = award(it);
+  delete state.drafts[it.id];   // solved: nothing left to resume, so it opens fresh next time
+  winNext = nextStep(it, wasDone);
+  save();
+  setFb(null);
+  renderMe();
+  showWin(it, gained, !wasDone && themeDone(t) ? t : null);
+}
+// Where Next goes after `it`: the next open question in its theme (later ones first, then any
+// earlier one still open), then the first open question of the following themes. Solved
+// questions are skipped, so Next never lands on one that's already done. The exception is
+// `review`, going back over a theme you had already finished: then Next steps through it in order.
+function isOpen(x){ return !state.solved[x.id]; }
+function nextStep(it, review){
+  const t = themeOf(it), i = t.items.indexOf(it);
+  if (review){
+    if (i < t.items.length - 1) return { id:t.items[i + 1].id, label:'Next question' };
+  } else {
+    const o = t.items.slice(i + 1).find(isOpen) || t.items.slice(0, i).find(isOpen);
+    if (o) return { id:o.id, label:'Next question' };
+  }
+  const ti = THEMES.indexOf(t);
+  for (let k = 1; k < THEMES.length; k++){
+    const o = THEMES[(ti + k) % THEMES.length].items.find(isOpen);
+    if (o) return { id:o.id, label:'Next theme' };
+  }
+  return { id:null, label:'See your stats' };
+}
+function showWin(it, gained, finished){
+  // Submitting a shown answer isn't "Correct!", even on a question you'd already solved.
+  const earned = gained !== 0 && !visit.shown;
+  $('#winTitle').textContent = earned ? 'Correct!' : 'That\u2019s the answer';
+  if (earned) playWinSound();
+  $('#winPts').textContent = gained === 'already' ? 'Already solved' : gained > 0 ? '+' + plural(gained, 'point', 'points') : 'No points this time';
+  const row = state.stats.streak, rowEl = $('#winRow');
+  rowEl.textContent = finished ? 'You finished ' + finished.name : gained !== 0 && visit.counted && row >= 2 ? row + ' in a row' : '';
+  rowEl.hidden = !rowEl.textContent;
+  $('#winWhy').innerHTML = it.explain;
+  $('#nextBtn').textContent = winNext.label;
+  const w = $('#win');
+  w.hidden = false; w.classList.remove('show'); void w.offsetWidth; w.classList.add('show');
+  $('#app').setAttribute('inert', '');
+  $('#nextBtn').focus({ preventScroll:true });
+  paintBars();
+}
+function hideWin(){
+  const w = $('#win'); if (w.hidden) return;
+  w.hidden = true; w.classList.remove('show');
+  $('#app').removeAttribute('inert');
+  paintBars();
+}
+function nextTap(){
+  const n = (winNext || nextStep(item(), false)).id;
+  hideWin();
+  if (n) openItem(n, true); else openAcct();
+}
+
+/* ---------------- multi-touch taps ---------------- */
+// Every finger is tracked on its own, so two thumbs can tap two words at the same time
+// (or overlap their taps), and a finger resting on the screen doesn't block other taps.
+// A tap counts when the finger lifts on the same button it pressed.
+// Mouse, keyboard and TalkBack still go through the normal click event.
+const TAPS = [['#bank .chip', chipTap], ['#code .blank', blankTap], ['#submitBtn', submit], ['#nextBtn', nextTap]];
+function tapTarget(t){
+  if (!t || !t.closest) return null;
+  for (const [sel, fn] of TAPS){ const el = t.closest(sel); if (el) return { el, fn }; }
+  return null;
+}
+const usable = el => el.isConnected && !el.disabled && !el.closest('[inert]') && !el.closest('[hidden]');
+const fingers = new Map();
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return;
+  const hit = tapTarget(e.target);
+  if (!hit || !usable(hit.el)) return;
+  fingers.set(e.pointerId, hit);
+  hit.el.classList.add('down');
+});
+document.addEventListener('pointerup', e => {
+  const hit = fingers.get(e.pointerId); if (!hit) return;
+  fingers.delete(e.pointerId);
+  hit.el.classList.remove('down');
+  const r = hit.el.getBoundingClientRect(), slop = 10;
+  const inside = e.clientX >= r.left - slop && e.clientX <= r.right + slop && e.clientY >= r.top - slop && e.clientY <= r.bottom + slop;
+  if (!inside || !usable(hit.el)) return;
+  hit.el._tapAt = performance.now();
+  hit.fn(hit.el);
+});
+document.addEventListener('pointercancel', e => {
+  const hit = fingers.get(e.pointerId);
+  if (hit){ hit.el.classList.remove('down'); fingers.delete(e.pointerId); }
+});
+// Stop the browser's own click after a touch tap. Otherwise tapping Submit could also
+// "click" the Next button that appears in the same spot.
+document.addEventListener('touchend', e => { if (e.cancelable && tapTarget(e.target)) e.preventDefault(); }, { passive:false });
+document.addEventListener('click', e => {
+  const hit = tapTarget(e.target);
+  if (!hit || !usable(hit.el)) return;
+  if (hit.el._tapAt && performance.now() - hit.el._tapAt < 700) return;   // already handled as a touch tap
+  hit.fn(hit.el);
+});
+
+/* ---------------- hints and answers ---------------- */
+function useHint(it){
+  const k = state.help[it.id] || 0;
+  if (k >= helpMax(it)) return;
+  state.help[it.id] = k + 1;
+  if (it.kind === 'ex'){
+    if (k + 1 >= 3) revealOneBlank(it);
+    ex.marks = null;
+    paintBlanks();
+    saveDraft();
+  }
+  save();
+}
+function revealOneBlank(it){
+  let i = ex.vals.findIndex((v, j) => !isGiven(j) && !blankRight(it, j, v || ''));
+  if (i < 0) i = ex.vals.findIndex((v, j) => !isGiven(j));
+  if (i < 0) return;
+  ex.given.push(i);
+  ex.vals[i] = it.blanks[i].b;
+  if (ex.last === i) ex.last = null;
+  if (ex.active === i) ex.active = firstEmpty();
+}
+function renderHints(){
+  const it = item(), k = state.help[it.id] || 0, max = helpMax(it);
+  let rows = [];
+  if (it.kind === 'ch'){
+    rows = it.ladder.slice(0, k).map(s => '<li><p>' + s.text + '</p>' + (s.code ? '<pre class="hcode">' + hlGaps(s.code) + '</pre>' : '') + '</li>');
+  } else {
+    rows.push('<li><p>' + esc(it.hint) + '</p></li>');
+    if (k >= 2) rows.push('<li><p>The first letter of each missing word is now in its blank.</p></li>');
+    ex.given.slice().sort((a, b) => a - b).forEach(i => rows.push('<li><p>Blank ' + (i + 1) + ' is filled in for you.</p></li>'));
+  }
+  const now = worthNow(it);
+  let note;
+  if (state.solved[it.id]) note = 'You\u2019ve already solved this one.';
+  else if (state.revealed[it.id]) note = 'The answer was shown, so this one is worth 0 points.';
+  else if (k < max){ const after = worthAt(it, k + 1); note = 'Worth ' + plural(now, 'point', 'points') + ' now.' + (after < now ? ' Another hint lowers it to ' + after + '.' : ''); }
+  else note = 'That\u2019s every hint. Worth ' + plural(now, 'point', 'points') + ' now.';
+  openSheet(k > 1 ? 'Hints' : 'Hint',
+    '<ol class="hints">' + rows.join('') + '</ol><p class="hnote">' + note + '</p>' +
+    (k < max ? '<button type="button" class="sheetbtn" id="moreHint">Show another hint</button>' : ''));
+  const more = $('#moreHint');
+  if (more) more.onclick = () => { useHint(it); renderHints(); };
+}
+$('#hintBtn').onclick = () => { const it = item(); if (!state.help[it.id]) useHint(it); renderHints(); };
+
+$('#answerBtn').onclick = () => {
+  const it = item();
+  if (!state.solved[it.id] && !state.revealed[it.id]) state.revealed[it.id] = true;
+  visit.shown = true;
+  if (it.kind === 'ch'){ editor.value = it.solution; editor.scrollTop = 0; updateHL(); }
+  else { ex.vals = it.blanks.map(b => b.b); ex.active = null; ex.last = null; ex.marks = null; paintBlanks(); }
+  saveDraft(); save();
+  setFb('Here\u2019s the answer. Tap Submit to continue.', 'info');
+};
+
+/* ---------------- bottom sheet ---------------- */
+let sheetReturn = null;
+function openSheet(title, html){
+  const sh = $('#sheet');
+  $('#sheetTitle').textContent = title;
+  $('#sheetBody').innerHTML = html;
+  $('#sheetBody').scrollTop = 0;
+  if (sh.hidden){ sheetReturn = document.activeElement; sh.hidden = false; $('#app').setAttribute('inert', ''); }
+  ($('#moreHint') || $('#sheetClose')).focus({ preventScroll:true });
+}
+function closeSheet(){
+  const sh = $('#sheet'); if (sh.hidden) return;
+  sh.hidden = true;
+  if ($('#win').hidden && $('#acct').hidden && $('#themes').hidden) $('#app').removeAttribute('inert');
+  if (sheetReturn && sheetReturn.isConnected) sheetReturn.focus({ preventScroll:true });
+  renderFb();
+}
+$('#sheetClose').onclick = closeSheet;
+$('#sheetScrim').onclick = closeSheet;
+
+function cell(v, dec){
+  if (v === null || v === undefined) return '<span class="null">NULL</span>';
+  if (typeof v === 'number') return dec ? (Math.round(v * 100) / 100).toFixed(2) : String(v);
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (v instanceof Date) return esc(v.toISOString().slice(0, 10));
+  if (typeof v === 'object') return esc(JSON.stringify(v));
+  return esc(v);
+}
+function tableHTML(rows){
+  if (!rows.length) return '<p class="sublabel">No rows.</p>';
+  const { cols } = toMatrix(rows);
+  const dec = cols.map(c => rows.some(r => typeof r[c] === 'number' && !Number.isInteger(r[c])));
+  return '<div class="scroll"><table class="rt"><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + cols.map((c, i) => '<td>' + cell(r[c], dec[i]) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+}
+function emptyColumnWarning(rows){
+  if (!rows || !rows.length) return '';
+  const { cols } = toMatrix(rows);
+  const bad = cols.filter(c => rows.every(r => r[c] === undefined));
+  if (!bad.length) return '';
+  return '<p class="warnline">' + bad.map(b => '<strong>' + esc(b) + '</strong>').join(', ') + (bad.length === 1 ? ' is' : ' are') +
+    ' empty in every row. That usually means the column name is misspelled or belongs to a different table.</p>';
+}
+$('#resultBtn').onclick = () => {
+  const r = visit.run; if (!r) return;
+  let h = '';
+  if (r.message) h += '<p class="count">' + esc(r.message) + '</p>';
+  if (r.rows){
+    if (r.label) h += '<p class="sublabel">' + esc(r.label) + '</p>';
+    h += '<p class="count">' + plural(r.rows.length, 'row', 'rows') + '</p>' + emptyColumnWarning(r.rows) + tableHTML(r.rows);
+  }
+  openSheet('Your result', h);
+};
+const rowObjects = t => t.rows.map(r => Object.fromEntries(t.cols.map((c, i) => [c[0], r[i]])));
+$('#tablesBtn').onclick = () => {
+  openSheet('Tables', TABLES.map((t, i) =>
+    '<section class="tbl"><h3>' + t.name + '</h3><p class="cols">' + t.cols.map(c => '<code>' + c[0] + '</code>').join(' ') + '</p>' +
+    '<button type="button" class="textbtn" data-t="' + i + '" aria-expanded="false">Show the ' + t.rows.length + ' rows</button><div hidden></div></section>').join(''));
+};
+$('#sheetBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-t]'); if (!b) return;
+  const t = TABLES[+b.dataset.t], box = b.nextElementSibling, open = box.hidden;
+  if (open && !box.innerHTML) box.innerHTML = tableHTML(rowObjects(t));
+  box.hidden = !open;
+  b.setAttribute('aria-expanded', String(open));
+  b.textContent = open ? 'Hide rows' : 'Show the ' + t.rows.length + ' rows';
+});
+
+/* ---------------- themes screen ---------------- */
+function renderThemes(){
+  const cur = item().theme;
+  $('#themeList').innerHTML = THEMES.map(t => {
+    const d = t.items.filter(i => state.solved[i.id]).length, n = t.items.length, all = d === n;
+    return '<button type="button" class="themerow' + (t.id === cur ? ' current' : '') + '" data-theme="' + t.id + '" style="--done:' + Math.round(d / n * 100) + '%"' +
+      (t.id === cur ? ' aria-current="true"' : '') + ' aria-label="' + esc(t.name) + ', ' + d + ' of ' + n + ' solved. ' + esc(t.about) + '">' +
+      '<span class="trn">' + esc(t.name) + '</span><span class="trc' + (all ? ' done' : '') + '" aria-hidden="true">' + (all ? 'Done' : d + '/' + n) + '</span>' +
+      '<span class="tra" aria-hidden="true">' + esc(t.about) + '</span></button>';
+  }).join('');
+}
+function openThemes(){
+  renderThemes();
+  $('#themes').hidden = false;
+  $('#themesIn').scrollTop = 0;
+  $('#app').setAttribute('inert', '');
+  fitSoon();
+  const cur = $('#themeList .current');
+  (cur || $('#themesBack')).focus({ preventScroll:true });
+}
+function closeThemes(){
+  $('#themes').hidden = true;
+  $('#app').removeAttribute('inert');
+  $('#themeBtn').focus({ preventScroll:true });
+}
+$('#themeBtn').onclick = openThemes;
+$('#themesBack').onclick = closeThemes;
+$('#themeList').addEventListener('click', e => {
+  const b = e.target.closest('.themerow'); if (!b) return;
+  const t = THEME_BY[b.dataset.theme];
+  const target = t.items.find(i => !state.solved[i.id]) || t.items[0];
+  closeThemes();
+  openItem(target.id, true);
+});
+
+/* ---------------- stats page ---------------- */
+function avatarHTML(){ const c = Array.from(state.name.trim())[0]; return c ? esc(c.toUpperCase()) : PERSON; }
+function renderMe(){
+  const pts = totalPoints();
+  $('#meAvatar').innerHTML = avatarHTML();
+  $('#mePts').textContent = pts;
+  $('#meBtn').setAttribute('aria-label', 'Your stats, ' + plural(pts, 'point', 'points'));
+}
+function renderAcct(){
+  const pts = totalPoints(), L = levelInfo(pts), s = state.stats;
+  const solved = Object.keys(state.solved).filter(id => byId(id));
+  const clean = solved.filter(id => state.solved[id].how === 'clean').length;
+  $('#acctAvatar').innerHTML = avatarHTML();
+  if (document.activeElement !== $('#nameInput')) $('#nameInput').value = state.name;
+  $('#lvlName').textContent = L.name;
+  $('#lvlFill').style.width = Math.round(Math.max(0, Math.min(1, L.pct)) * 100) + '%';
+  $('#lvlNext').textContent = L.next ? plural(L.next[0] - pts, 'point', 'points') + ' to ' + L.next[1] : 'Top level reached';
+  $('#emptyNote').hidden = !!(s.attempts || solved.length);
+  const stats = [
+    [pts, 'Points'],
+    [solved.length + '<small>/' + ALL.length + '</small>', 'Solved'],
+    [s.attempts ? Math.round(s.correct / s.attempts * 100) + '<small>%</small>' : '\u2013', 'Accuracy'],
+    [s.best, 'Best streak'],
+    [dayStreak(), 'Day streak'],
+    [clean, 'Without hints']
+  ];
+  $('#stats').innerHTML = stats.map(([v, l]) => '<div class="stat"><dt>' + l + '</dt><dd>' + v + '</dd></div>').join('');
+}
+function openAcct(){
+  renderAcct();
+  $('#acct').hidden = false;
+  $('#acctIn').scrollTop = 0;
+  $('#app').setAttribute('inert', '');
+  fitSoon();
+  $('#acctBack').focus({ preventScroll:true });
+}
+function closeAcct(){
+  disarmReset();
+  $('#acct').hidden = true;
+  $('#app').removeAttribute('inert');
+  $('#meBtn').focus({ preventScroll:true });
+}
+$('#meBtn').onclick = openAcct;
+$('#acctBack').onclick = closeAcct;
+$('#nameInput').addEventListener('input', e => {
+  state.name = e.target.value.slice(0, 24);
+  save();
+  $('#acctAvatar').innerHTML = avatarHTML();
+  renderMe();
+});
+$('#nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+let resetArmed = null;
+function disarmReset(){
+  clearTimeout(resetArmed); resetArmed = null;
+  const b = $('#resetBtn'); b.textContent = 'Reset progress'; b.classList.remove('armed');
+}
+$('#resetBtn').onclick = () => {
+  const b = $('#resetBtn');
+  if (!resetArmed){ b.textContent = 'Tap again to erase all progress'; b.classList.add('armed'); resetArmed = setTimeout(disarmReset, 4000); return; }
+  disarmReset();
+  state.solved = {}; state.help = {}; state.revealed = {}; state.drafts = {};
+  state.stats = { attempts:0, correct:0, streak:0, best:0, days:[] };
+  save();
+  shownId = null;
+  openItem(ALL[0].id);
+  renderMe(); renderAcct(); fitSoon();
+};
+
+/* ---------------- open a question ---------------- */
+function openItem(id, focusQ){
+  if (!byId(id)) return;
+  saveDraft();
+  curId = id; state.current = id; save();
+  const it = item(), isCh = it.kind === 'ch';
+  const t = themeOf(it), idx = t.items.indexOf(it);
+  visit = { counted:false, missed:false, shown:false, run:null };
+  $('#tbName').textContent = t.name;
+  $('#tbPos').textContent = (idx + 1) + '/' + t.items.length;
+  $('#themeBtn').setAttribute('aria-label', t.name + ', question ' + (idx + 1) + ' of ' + t.items.length + '. Choose a theme');
+  $('#ask').innerHTML = it.task;
+  highlightKeys($('#ask'), KEYS[it.id] || []);
+  $('#code').hidden = isCh; $('#bank').hidden = isCh; $('#grow').hidden = isCh;
+  $('#editorbox').hidden = !isCh;
+  if (isCh){ const d = state.drafts[id]; editor.value = typeof d === 'string' ? d : ''; editor.scrollTop = 0; updateHL(); }
+  else renderExercise(it);
+  shownId = id;
+  fbMsg = null; renderFb();
+  qBox.scrollTop = 0;
+  if (focusQ) $('#ask').focus({ preventScroll:true });
+  fitSoon();
+}
+
+/* ---------------- fit everything on one screen ---------------- */
+// Start at full size and step the type down until nothing overflows.
+let fitRaf = 0;
+function fitSoon(){
+  cancelAnimationFrame(fitRaf);
+  fitRaf = requestAnimationFrame(() => { fitBox(qBox, .6); if (!$('#acct').hidden) fitBox($('#acctIn'), .8); if (!$('#themes').hidden) fitBox($('#themesIn'), .8); });
+}
+function fitBox(el, min){
+  let f = 1;
+  el.style.setProperty('--fit', '1');
+  while (f > min + 0.001 && el.scrollHeight > el.clientHeight + 1){
+    f = Math.round((f - 0.05) * 100) / 100;
+    el.style.setProperty('--fit', String(f));
+  }
+}
+addEventListener('resize', fitSoon);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
+
+/* ---------------- Android: colour the status and navigation bars to match ---------------- */
+function paintBars(){
+  const bridge = window.AndroidApp;
+  if (!bridge || typeof bridge.postMessage !== 'function') return;
+  const green = !$('#win').hidden;
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const paper = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim().toUpperCase();
+  try { bridge.postMessage('bars ' + (green ? '#04AA6D' : paper) + ' ' + (green || dark ? 'light' : 'dark')); } catch(e){}
+}
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+if (darkQuery.addEventListener) darkQuery.addEventListener('change', paintBars);
+
+// The Android back button closes whatever is on top first.
+window.__androidBack = () => {
+  if (!$('#sheet').hidden){ closeSheet(); return true; }
+  if (!$('#win').hidden){ hideWin(); return true; }
+  if (!$('#acct').hidden){ closeAcct(); return true; }
+  if (!$('#themes').hidden){ closeThemes(); return true; }
+  return false;
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && window.__androidBack()) e.preventDefault(); });
+
+/* ---------------- boot ---------------- */
+renderMe();
+openItem(curId);
+paintBars();
+
+const FALLBACKS = [
+  'https://cdn.jsdelivr.net/npm/alasql@4.4.0/dist/alasql.min.js',
+  'https://cdn.jsdelivr.net/npm/alasql@4.0.0/dist/alasql.min.js',
+  'https://cdn.jsdelivr.net/npm/alasql@1.7.3/dist/alasql.min.js'
+];
+function loadEngine(i){
+  return new Promise((resolve, reject) => {
+    if (window.alasql) return resolve();
+    if (i >= FALLBACKS.length) return reject();
+    const s = document.createElement('script');
+    s.src = FALLBACKS[i];
+    s.onload = () => window.alasql ? resolve() : loadEngine(i + 1).then(resolve, reject);
+    s.onerror = () => loadEngine(i + 1).then(resolve, reject);
+    document.head.appendChild(s);
+  });
+}
+let engineLoading = false;
+function startEngine(){
+  if (engineReady || engineLoading) return;
+  engineLoading = true; engineFailed = false;
+  loadEngine(0).then(() => { engineReady = true; }, () => { engineFailed = true; }).then(() => { engineLoading = false; });
+}
+startEngine();
+</script>
+</body>
+</html>

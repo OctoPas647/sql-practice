@@ -1,0 +1,7 @@
+<resources>
+    <!-- Light theme: the page shows its light colors. -->
+    <style name="Theme.SQLPractice" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/sql_nav</item>
+        <item name="android:colorAccent">@color/sql_green</item>
+    </style>
+</resources>
